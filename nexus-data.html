@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS EDGE — Profitable Trading Starts With Data</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d0d0f;--bg2:#141417;--bg3:#1a1a1f;--bg4:#222228;
+  --blue:#3b82f6;--blue2:#60a5fa;--green:#22c55e;--red:#ef4444;
+  --gold:#f59e0b;--purple:#a78bfa;--cyan:#06b6d4;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  --border:#2a2a32;--border2:#3a3a45;
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-size:18px;font-weight:800;letter-spacing:-0.5px;color:#fff}.logo span{color:var(--blue)}
+.header-tag{font-size:11px;color:var(--text3);margin-left:8px;background:var(--bg4);padding:2px 8px;border-radius:4px;border:1px solid var(--border)}
+.header-right{display:flex;align-items:center;gap:12px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.live-label{font-size:12px;color:var(--green);font-weight:600}
+.header-time{font-size:12px;color:var(--text3)}
+.layout{display:flex;min-height:calc(100vh - 56px)}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);padding:16px 12px;flex-shrink:0}
+.sidebar-section{margin-bottom:20px}
+.sidebar-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px;padding-left:4px}
+.sidebar-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s}
+.sidebar-item:hover,.sidebar-item.active{background:var(--bg4);color:var(--text)}
+.sidebar-item .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot.blue{background:var(--blue)}.dot.green{background:var(--green)}.dot.red{background:var(--red)}.dot.gold{background:var(--gold)}.dot.purple{background:var(--purple)}
+.main{flex:1;padding:24px;overflow-x:hidden}
+.page-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text3);margin-bottom:24px}
+.ticker-tabs{display:flex;gap:6px;margin-bottom:24px;flex-wrap:wrap}
+.ticker-tab{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:all .15s}
+.ticker-tab:hover{border-color:var(--blue2);color:var(--text)}
+.ticker-tab.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat-card.blue-accent::before{background:var(--blue)}.stat-card.green-accent::before{background:var(--green)}
+.stat-card.red-accent::before{background:var(--red)}.stat-card.gold-accent::before{background:var(--gold)}
+.stat-card.purple-accent::before{background:var(--purple)}.stat-card.cyan-accent::before{background:var(--cyan)}
+.card-label{font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.card-value{font-size:26px;font-weight:700;line-height:1}
+.card-value.green{color:var(--green)}.card-value.red{color:var(--red)}.card-value.blue{color:var(--blue2)}.card-value.gold{color:var(--gold)}
+.card-sub{font-size:11px;color:var(--text3);margin-top:6px}
+.section{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-title{font-size:14px;font-weight:600}
+.section-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
+.badge-blue{background:rgba(59,130,246,.15);color:var(--blue2);border:1px solid rgba(59,130,246,.3)}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.data-table td{padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border2)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--bg4)}
+.tag-green{color:var(--green);font-weight:600}.tag-red{color:var(--red);font-weight:600}.tag-blue{color:var(--blue2);font-weight:600}.tag-gold{color:var(--gold);font-weight:600}
+.bar-wrap{background:var(--bg4);border-radius:4px;height:8px;overflow:hidden;margin-top:4px}
+.bar-fill{height:100%;border-radius:4px}
+.bar-fill.green{background:var(--green)}.bar-fill.red{background:var(--red)}.bar-fill.blue{background:var(--blue)}
+.dow-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.dow-card{background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.dow-day{font-size:12px;color:var(--text3);margin-bottom:8px}
+.dow-pct{font-size:20px;font-weight:700}.dow-pct.green{color:var(--green)}.dow-pct.red{color:var(--red)}
+.dow-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.chart-wrap{position:relative;height:180px}
+.bias-meter{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.bias-bar-wrap{flex:1;height:10px;background:var(--bg4);border-radius:5px;overflow:hidden}
+.bias-fill{height:100%;border-radius:5px}
+.bias-val{font-size:13px;font-weight:700;min-width:40px;text-align:right}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.setup-card{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:16px;margin-bottom:12px}
+.setup-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.setup-name{font-size:14px;font-weight:700}.setup-ticker{font-size:12px;color:var(--text3)}
+.setup-status{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
+.status-active{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.status-watch{background:rgba(245,158,11,.15);color:var(--gold);border:1px solid rgba(245,158,11,.3)}
+.setup-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.setup-stat{background:var(--bg3);border-radius:6px;padding:8px;text-align:center}
+.ss-label{font-size:10px;color:var(--text3);margin-bottom:4px}.ss-val{font-size:14px;font-weight:700}
+.info-banner{background:linear-gradient(135deg,rgba(59,130,246,.1),rgba(167,139,250,.1));border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:12px}
+.info-icon{font-size:24px}
+.info-text{font-size:13px;color:var(--text2);line-height:1.5}
+.info-text strong{color:var(--text)}
+@media(max-width:900px){.two-col{grid-template-columns:1fr}.sidebar{display:none}}
+</style>
+</head><body>
+<div class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo">NEXUS<span>EDGE</span></div>
+    <span class="header-tag">v1.0 · connect to nexus</span>
+  </div>
+  <div class="header-right">
+    <div class="live-dot"></div>
+    <span class="live-label">LIVE DATA READY</span>
+    <span class="header-time" id="clock"></span>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Equity Futures</div>
+      <div class="sidebar-item active" onclick="selectTicker('ES')"><span class="dot blue"></span>ES &mdash; S&amp;P 500</div>
+      <div class="sidebar-item" onclick="selectTicker('NQ')"><span class="dot blue"></span>NQ &mdash; Nasdaq</div>
+      <div class="sidebar-item" onclick="selectTicker('YM')"><span class="dot blue"></span>YM &mdash; Dow Jones</div>
+      <div class="sidebar-item" onclick="selectTicker('RTY')"><span class="dot blue"></span>RTY &mdash; Russell 2K</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Commodities</div>
+      <div class="sidebar-item" onclick="selectTicker('GC')"><span class="dot gold"></span>GC &mdash; Gold</div>
+      <div class="sidebar-item" onclick="selectTicker('CL')"><span class="dot red"></span>CL &mdash; Crude Oil</div>
+      <div class="sidebar-item" onclick="selectTicker('SI')"><span class="dot gold"></span>SI &mdash; Silver</div>
+      <div class="sidebar-item" onclick="selectTicker('ZB')"><span class="dot purple"></span>ZB &mdash; T-Bond</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Reports</div>
+      <div class="sidebar-item"><span class="dot green"></span>Green/Red Days</div>
+      <div class="sidebar-item"><span class="dot blue"></span>Gap Fill Stats</div>
+      <div class="sidebar-item"><span class="dot blue"></span>Day of Week</div>
+      <div class="sidebar-item"><span class="dot blue"></span>Session Bias</div>
+      <div class="sidebar-item"><span class="dot blue"></span>OR Breakout</div>
+      <div class="sidebar-item"><span class="dot blue"></span>Pattern Stats</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="page-title" id="page-title">ES &mdash; S&amp;P 500 Futures</div>
+    <div class="page-sub">Historical statistics &bull; statistical edge &bull; market bias &mdash; <span style="color:var(--blue2);font-weight:600">profitable trading starts with data</span></div>
+
+    <div class="info-banner">
+      <div class="info-icon">&#x26A1;</div>
+      <div class="info-text"><strong>Ready for Nexus Integration.</strong> All data slots are pre-mapped for live API connection. Replace static values with your Nexus feed endpoints to go live. Supports ES, NQ, YM, RTY, GC, CL, SI, ZB.</div>
+    </div>
+
+    <div class="ticker-tabs" id="ticker-tabs">
+      <div class="ticker-tab active" onclick="selectTicker('ES')">ES</div>
+      <div class="ticker-tab" onclick="selectTicker('NQ')">NQ</div>
+      <div class="ticker-tab" onclick="selectTicker('YM')">YM</div>
+      <div class="ticker-tab" onclick="selectTicker('RTY')">RTY</div>
+      <div class="ticker-tab" onclick="selectTicker('GC')">GC</div>
+      <div class="ticker-tab" onclick="selectTicker('CL')">CL</div>
+      <div class="ticker-tab" onclick="selectTicker('SI')">SI</div>
+      <div class="ticker-tab" onclick="selectTicker('ZB')">ZB</div>
+    </div>
+
+    <div class="cards-grid" id="stat-cards"></div>
+
+    <div class="two-col">
+      <div>
+        <div class="section">
+          <div class="section-header"><span class="section-title">&#x1F7E2; Green vs Red Days</span><span class="section-badge badge-blue">Last 252 Trading Days</span></div>
+          <div style="display:flex;gap:12px;margin-bottom:16px">
+            <div style="flex:1;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:14px;text-align:center">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Green Days</div>
+              <div style="font-size:32px;font-weight:800;color:var(--green);line-height:1" id="green-count">—</div>
+              <div style="font-size:14px;color:var(--green);font-weight:600;margin-top:4px" id="green-pct">—</div>
+            </div>
+            <div style="flex:1;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:14px;text-align:center">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Red Days</div>
+              <div style="font-size:32px;font-weight:800;color:var(--red);line-height:1" id="red-count">—</div>
+              <div style="font-size:14px;color:var(--red);font-weight:600;margin-top:4px" id="red-pct">—</div>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="greenredChart"></canvas></div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">&#x1F4C5; Day of Week Bias</span><span class="section-badge badge-blue">% Green Days</span></div>
+          <div class="dow-grid" id="dow-grid"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">&#x23F1; Opening Range Breakout</span><span class="section-badge badge-blue">First 30 Min (9:30-10:00 ET)</span></div>
+          <table class="data-table" id="or-table">
+            <thead><tr><th>Direction</th><th>Occurrences %</th><th>EOD Hold %</th><th>Avg Extension</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">&#x1F4C8; Monthly Green %</span><span class="section-badge badge-blue">By Calendar Month</span></div>
+          <div class="chart-wrap"><canvas id="monthChart"></canvas></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section">
+          <div class="section-header"><span class="section-title">&#x2195; Gap Fill Statistics</span><span class="section-badge badge-blue">NY Session</span></div>
+          <div class="chart-wrap"><canvas id="gapChart"></canvas></div>
+          <table class="data-table" style="margin-top:14px" id="gap-table">
+            <thead><tr><th>Category</th><th>Count</th><th>Fill %</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">&#x1F3AF; Session Bias</span><span class="section-badge badge-blue">% Bullish Sessions</span></div>
+          <div id="session-bias"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">&#x1F4CF; ATR &amp; Range Stats</span><span class="section-badge badge-blue">Daily</span></div>
+          <div class="cards-grid" id="range-cards" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px"></div>
+          <div class="chart-wrap" style="height:150px"><canvas id="atrChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="section-title">&#x26A1; Live Setups &amp; Market Bias</span><span class="section-badge badge-green">Active</span></div>
+      <div id="live-setups" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="section-title">&#x1F9EA; Historical Pattern Stats</span><span class="section-badge badge-blue">252-Day Sample</span></div>
+      <table class="data-table" id="pattern-table">
+        <thead><tr><th>Pattern</th><th>Occurrences</th><th>Win Rate</th><th>Avg Move</th><th>Edge Score</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div style="text-align:center;padding:24px 0;font-size:12px;color:var(--text3);border-top:1px solid var(--border);margin-top:8px">
+      NEXUS EDGE &bull; Historical data for reference &bull; Connect live feed via Nexus API &bull; Not financial advice
+    </div>
+  </div>
+</div><script>
+const TICKERS={
+ES:{name:'ES — S&P 500 Futures',green:143,total:252,greenPct:56.7,atr:'52 pts',atrPct:'0.93%',avgRange:'58 pts',
+  gapUp:67,gapUpFill:48,gapDown:60,gapDownFill:60,orBreakUp:58,orBreakDown:42,
+  dow:[{d:'Mon',g:54},{d:'Tue',g:59},{d:'Wed',g:55},{d:'Thu',g:52},{d:'Fri',g:58}],
+  sessions:[{s:'NY Open 9:30-11:30',pct:62},{s:'Midday 11:30-14:00',pct:48},{s:'NY Close 14:00-16:00',pct:57},{s:'Overnight Globex',pct:53}],
+  monthly:[58,52,61,47,55,63,51,57,60,54,49,56],
+  patterns:[['Bullish Engulfing',312,67.3,'+0.84%',8.4],['Bearish Engulfing',287,62.1,'-0.79%',7.8],['Gap Up Fill',134,48.5,'-0.42%',4.9],['Gap Down Fill',119,60.1,'+0.38%',6.0],['OR Breakout Hold',203,71.2,'+0.96%',9.1],['Monday Reversal',98,55.6,'+0.51%',5.6],['FOMC Day',44,38.0,'+1.20%',3.8],['Option Expiry Fri',52,61.5,'+0.67%',6.2]],
+  stats:[['ATR (14)','52 pts','blue'],['Avg Daily Range','58 pts','blue'],['Avg Up Day','+0.74%','green'],['Avg Down Day','-0.71%','red'],['Max Up Day','+4.12%','green'],['Max Down Day','-4.89%','red'],['Consec Green Max','8 days','green'],['Consec Red Max','6 days','red']]},
+NQ:{name:'NQ — Nasdaq 100 Futures',green:138,total:252,greenPct:54.8,atr:'198 pts',atrPct:'1.13%',avgRange:'220 pts',
+  gapUp:71,gapUpFill:45,gapDown:57,gapDownFill:58,orBreakUp:61,orBreakDown:39,
+  dow:[{d:'Mon',g:52},{d:'Tue',g:61},{d:'Wed',g:53},{d:'Thu',g:50},{d:'Fri',g:56}],
+  sessions:[{s:'NY Open 9:30-11:30',pct:58},{s:'Midday 11:30-14:00',pct:46},{s:'NY Close 14:00-16:00',pct:59},{s:'Overnight Globex',pct:51}],
+  monthly:[55,49,63,44,58,65,48,60,56,52,47,54],
+  patterns:[['Bullish Engulfing',298,65.1,'+1.02%',8.2],['Bearish Engulfing',274,63.5,'-0.99%',8.0],['Gap Up Fill',148,45.3,'-0.51%',4.5],['Gap Down Fill',104,58.0,'+0.47%',5.8],['OR Breakout Hold',189,69.4,'+1.14%',8.9],['Tech Sector Lead',221,58.3,'+0.88%',5.8],['FOMC Day',44,34.1,'+1.48%',3.4],['Option Expiry Fri',52,59.6,'+0.82%',6.0]],
+  stats:[['ATR (14)','198 pts','blue'],['Avg Daily Range','220 pts','blue'],['Avg Up Day','+0.91%','green'],['Avg Down Day','-0.88%','red'],['Max Up Day','+5.21%','green'],['Max Down Day','-5.68%','red'],['Consec Green Max','7 days','green'],['Consec Red Max','7 days','red']]},
+YM:{name:'YM — Dow Jones Futures',green:141,total:252,greenPct:56.0,atr:'312 pts',atrPct:'0.76%',avgRange:'340 pts',
+  gapUp:62,gapUpFill:51,gapDown:55,gapDownFill:56,orBreakUp:55,orBreakDown:45,
+  dow:[{d:'Mon',g:56},{d:'Tue',g:58},{d:'Wed',g:54},{d:'Thu',g:53},{d:'Fri',g:57}],
+  sessions:[{s:'NY Open 9:30-11:30',pct:60},{s:'Midday 11:30-14:00',pct:49},{s:'NY Close 14:00-16:00',pct:56},{s:'Overnight Globex',pct:52}],
+  monthly:[57,53,60,48,54,61,50,56,59,53,48,55],
+  patterns:[['Bullish Engulfing',305,66.2,'+0.72%',8.3],['Bearish Engulfing',280,61.4,'-0.69%',7.7],['Gap Up Fill',128,51.6,'-0.38%',5.2],['Gap Down Fill',112,56.3,'+0.34%',5.6],['OR Breakout Hold',196,70.1,'+0.84%',9.0],['Value Rotation',167,54.8,'+0.61%',5.5],['FOMC Day',44,40.9,'+0.98%',4.1],['Option Expiry Fri',52,63.5,'+0.59%',6.4]],
+  stats:[['ATR (14)','312 pts','blue'],['Avg Daily Range','340 pts','blue'],['Avg Up Day','+0.62%','green'],['Avg Down Day','-0.59%','red'],['Max Up Day','+3.84%','green'],['Max Down Day','-3.95%','red'],['Consec Green Max','9 days','green'],['Consec Red Max','5 days','red']]},
+RTY:{name:'RTY — Russell 2000 Futures',green:135,total:252,greenPct:53.6,atr:'22 pts',atrPct:'1.18%',avgRange:'25 pts',
+  gapUp:69,gapUpFill:52,gapDown:58,gapDownFill:62,orBreakUp:57,orBreakDown:43,
+  dow:[{d:'Mon',g:51},{d:'Tue',g:57},{d:'Wed',g:52},{d:'Thu',g:51},{d:'Fri',g:55}],
+  sessions:[{s:'NY Open 9:30-11:30',pct:56},{s:'Midday 11:30-14:00',pct:45},{s:'NY Close 14:00-16:00',pct:52},{s:'Overnight Globex',pct:50}],
+  monthly:[54,50,58,45,52,60,47,55,54,51,46,52],
+  patterns:[['Bullish Engulfing',289,63.7,'+1.12%',8.0],['Bearish Engulfing',265,64.2,'-1.09%',8.1],['Gap Up Fill',152,52.0,'-0.58%',5.2],['Gap Down Fill',126,62.0,'+0.52%',6.2],['OR Breakout Hold',178,67.9,'+1.21%',8.6],['Small Cap Rotation',198,52.0,'+0.79%',5.2],['FOMC Day',44,36.4,'+1.32%',3.6],['Option Expiry Fri',52,57.7,'+0.74%',5.8]],
+  stats:[['ATR (14)','22 pts','blue'],['Avg Daily Range','25 pts','blue'],['Avg Up Day','+0.95%','green'],['Avg Down Day','-0.92%','red'],['Max Up Day','+4.76%','green'],['Max Down Day','-4.98%','red'],['Consec Green Max','7 days','green'],['Consec Red Max','7 days','red']]},
+GC:{name:'GC — Gold Futures',green:140,total:252,greenPct:55.6,atr:'$28',atrPct:'1.02%',avgRange:'$32',
+  gapUp:58,gapUpFill:44,gapDown:52,gapDownFill:50,orBreakUp:54,orBreakDown:46,
+  dow:[{d:'Mon',g:58},{d:'Tue',g:54},{d:'Wed',g:52},{d:'Thu',g:55},{d:'Fri',g:60}],
+  sessions:[{s:'London Open 3:00-8:30',pct:61},{s:'NY Open 8:30-12:00',pct:55},{s:'NY Afternoon 12:00-17:00',pct:49},{s:'Asian Session',pct:53}],
+  monthly:[60,55,57,51,58,52,56,61,63,58,54,59],
+  patterns:[['Bullish Engulfing',278,68.3,'+0.96%',8.5],['Bearish Engulfing',251,61.0,'-0.88%',7.6],['Gap Up Fill',112,44.0,'-0.46%',4.4],['Gap Down Fill',98,50.0,'+0.42%',5.0],['OR Breakout Hold',188,72.0,'+1.08%',9.2],['Dollar Inverse',245,63.7,'+0.72%',6.4],['CPI Day',36,55.6,'+1.41%',5.6],['Fed Meeting Day',44,50.0,'+1.18%',5.0]],
+  stats:[['ATR (14)','$28','blue'],['Avg Daily Range','$32','blue'],['Avg Up Day','+0.88%','green'],['Avg Down Day','-0.84%','red'],['Max Up Day','+3.62%','green'],['Max Down Day','-3.40%','red'],['Consec Green Max','8 days','green'],['Consec Red Max','6 days','red']]},
+CL:{name:'CL — Crude Oil Futures',green:131,total:252,greenPct:52.0,atr:'$1.42',atrPct:'1.74%',avgRange:'$1.68',
+  gapUp:74,gapUpFill:41,gapDown:65,gapDownFill:55,orBreakUp:60,orBreakDown:40,
+  dow:[{d:'Mon',g:50},{d:'Tue',g:56},{d:'Wed',g:49},{d:'Thu',g:55},{d:'Fri',g:52}],
+  sessions:[{s:'Pre-Market EIA',pct:50},{s:'NY Open',pct:54},{s:'NY Afternoon',pct:44},{s:'Overnight',pct:51}],
+  monthly:[52,48,55,43,50,58,45,54,57,50,46,53],
+  patterns:[['Bullish Engulfing',262,60.3,'+1.42%',7.5],['Bearish Engulfing',248,61.7,'-1.38%',7.7],['Gap Up Fill',162,41.4,'-0.72%',4.1],['Gap Down Fill',138,55.1,'+0.64%',5.5],['OR Breakout Hold',172,65.7,'+1.61%',8.3],['EIA Report Wed',104,52.9,'+1.84%',5.3],['OPEC News',28,53.6,'+2.12%',5.4],['Inventory Draw',84,67.9,'+1.28%',6.8]],
+  stats:[['ATR (14)','$1.42','blue'],['Avg Daily Range','$1.68','blue'],['Avg Up Day','+1.24%','green'],['Avg Down Day','-1.19%','red'],['Max Up Day','+8.34%','green'],['Max Down Day','-7.82%','red'],['Consec Green Max','6 days','green'],['Consec Red Max','7 days','red']]},
+SI:{name:'SI — Silver Futures',green:136,total:252,greenPct:54.0,atr:'$0.48',atrPct:'1.65%',avgRange:'$0.56',
+  gapUp:61,gapUpFill:46,gapDown:54,gapDownFill:52,orBreakUp:55,orBreakDown:45,
+  dow:[{d:'Mon',g:55},{d:'Tue',g:52},{d:'Wed',g:51},{d:'Thu',g:54},{d:'Fri',g:58}],
+  sessions:[{s:'London Open',pct:59},{s:'NY Open',pct:53},{s:'NY Afternoon',pct:48},{s:'Asian Session',pct:52}],
+  monthly:[57,53,55,49,56,51,54,58,61,55,52,57],
+  patterns:[['Bullish Engulfing',271,65.4,'+1.18%',8.1],['Bearish Engulfing',244,62.3,'-1.12%',7.8],['Gap Up Fill',118,46.0,'-0.54%',4.6],['Gap Down Fill',102,52.0,'+0.48%',5.2],['OR Breakout Hold',183,70.5,'+1.32%',8.9],['Gold Lead',234,61.5,'+0.94%',6.2],['CPI Day',36,52.8,'+1.62%',5.3],['Fed Meeting Day',44,47.7,'+1.38%',4.8]],
+  stats:[['ATR (14)','$0.48','blue'],['Avg Daily Range','$0.56','blue'],['Avg Up Day','+1.06%','green'],['Avg Down Day','-1.01%','red'],['Max Up Day','+5.12%','green'],['Max Down Day','-4.78%','red'],['Consec Green Max','7 days','green'],['Consec Red Max','6 days','red']]},
+ZB:{name:'ZB — T-Bond Futures',green:129,total:252,greenPct:51.2,atr:'1-08',atrPct:'0.97%',avgRange:'1-13',
+  gapUp:55,gapUpFill:49,gapDown:50,gapDownFill:54,orBreakUp:52,orBreakDown:48,
+  dow:[{d:'Mon',g:53},{d:'Tue',g:50},{d:'Wed',g:49},{d:'Thu',g:52},{d:'Fri',g:54}],
+  sessions:[{s:'Pre-Market Data',pct:51},{s:'NY Open',pct:50},{s:'NY Afternoon',pct:45},{s:'Overnight',pct:54}],
+  monthly:[54,50,52,48,51,49,53,55,58,52,49,53],
+  patterns:[['Bullish Engulfing',253,60.5,'+0.72%',7.5],['Bearish Engulfing',241,59.3,'-0.70%',7.4],['Gap Up Fill',108,49.0,'-0.38%',4.9],['Gap Down Fill',95,54.0,'+0.36%',5.4],['OR Breakout Hold',165,63.0,'+0.81%',8.0],['CPI Surprise',28,57.1,'+1.12%',5.7],['Fed Meeting Day',44,54.5,'+0.98%',5.5],['NFP Friday',48,52.1,'+0.88%',5.2]],
+  stats:[['ATR (14)','1-08','blue'],['Avg Daily Range','1-13','blue'],['Avg Up Day','+0.68%','green'],['Avg Down Day','-0.65%','red'],['Max Up Day','+2.84%','green'],['Max Down Day','-3.12%','red'],['Consec Green Max','6 days','green'],['Consec Red Max','8 days','red']]}
+};
+
+let current='ES', grC, gpC, mnC, atC;
+
+function selectTicker(t){
+  current=t;
+  document.querySelectorAll('.ticker-tab').forEach(e=>e.classList.toggle('active',e.textContent.trim()===t));
+  document.querySelectorAll('.sidebar-item').forEach(e=>e.classList.toggle('active',e.textContent.trim().startsWith(t+' ')||e.textContent.trim().startsWith(t+' ')));
+  const d=TICKERS[t];
+  document.getElementById('page-title').textContent=d.name;
+  renderCards(d);renderGR(d);renderDOW(d);renderGap(d,t);renderOR(d);renderSession(d);renderMonthly(d);renderATR(d);renderPatterns(d);renderSetups(d,t);
+}
+
+function renderCards(d){
+  const r=d.total-d.green;
+  document.getElementById('stat-cards').innerHTML=[
+    {l:'Green Days',v:d.greenPct+'%',s:d.green+' of '+d.total+' days',c:'green',a:'green-accent'},
+    {l:'Red Days',v:(100-d.greenPct).toFixed(1)+'%',s:r+' of '+d.total+' days',c:'red',a:'red-accent'},
+    {l:'ATR (14)',v:d.atr,s:d.atrPct+' of price',c:'blue',a:'blue-accent'},
+    {l:'Avg Daily Range',v:d.avgRange,s:'historical average',c:'blue',a:'cyan-accent'},
+    {l:'Gap Up Fill %',v:d.gapUpFill+'%',s:d.gapUp+' gap-ups observed',c:'gold',a:'gold-accent'},
+    {l:'Gap Down Fill %',v:d.gapDownFill+'%',s:d.gapDown+' gap-downs observed',c:'gold',a:'purple-accent'},
+  ].map(x=>'<div class="stat-card '+x.a+'"><div class="card-label">'+x.l+'</div><div class="card-value '+x.c+'">'+x.v+'</div><div class="card-sub">'+x.s+'</div></div>').join('');
+}
+
+function renderGR(d){
+  const r=d.total-d.green, rp=(100-d.greenPct).toFixed(1);
+  document.getElementById('green-count').textContent=d.green;
+  document.getElementById('green-pct').textContent=d.greenPct+'%';
+  document.getElementById('red-count').textContent=r;
+  document.getElementById('red-pct').textContent=rp+'%';
+  if(grC)grC.destroy();
+  grC=new Chart(document.getElementById('greenredChart'),{type:'bar',
+    data:{labels:['Green Days','Red Days'],datasets:[{data:[d.green,r],backgroundColor:['rgba(34,197,94,.65)','rgba(239,68,68,.65)'],borderColor:['#22c55e','#ef4444'],borderWidth:1,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' days ('+(c.dataIndex===0?d.greenPct:rp)+'%)'}}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#94a3b8'}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#94a3b8'}}}}});
+}
+
+function renderDOW(d){
+  document.getElementById('dow-grid').innerHTML=d.dow.map(x=>'<div class="dow-card"><div class="dow-day">'+x.d+'</div><div class="dow-pct '+(x.g>=50?'green':'red')+'">'+x.g+'%</div><div class="dow-sub">green day</div><div style="margin-top:8px"><div class="bar-wrap"><div class="bar-fill green" style="width:'+x.g+'%"></div></div></div></div>').join('');
+}
+
+function renderGap(d,t){
+  const gUp=d.gapUp,gDn=d.gapDown,tot=gUp+gDn;
+  document.querySelector('#gap-table tbody').innerHTML=[
+    ['Gap Up',gUp,((gUp/tot)*100).toFixed(0)+'%'],
+    ['Gap Up Filled',d.gapUpFill+'%','filled'],
+    ['Gap Up NOT Filled',(100-d.gapUpFill)+'%','not filled'],
+    ['Gap Down',gDn,((gDn/tot)*100).toFixed(0)+'%'],
+    ['Gap Down Filled',d.gapDownFill+'%','filled'],
+    ['Gap Down NOT Filled',(100-d.gapDownFill)+'%','not filled'],
+  ].map((r,i)=>'<tr><td>'+(i<3?'':'')+''+r[0]+'</td><td class="tag-blue">'+r[1]+'</td><td class="'+(parseFloat(r[2])>=50?'tag-green':'tag-red')+'">'+r[2]+'</td></tr>').join('');
+  if(gpC)gpC.destroy();
+  gpC=new Chart(document.getElementById('gapChart'),{type:'doughnut',
+    data:{labels:['Gap Up Filled','Gap Up Not Filled','Gap Down Filled','Gap Down Not Filled'],
+      datasets:[{data:[Math.round(gUp*d.gapUpFill/100),Math.round(gUp*(100-d.gapUpFill)/100),Math.round(gDn*d.gapDownFill/100),Math.round(gDn*(100-d.gapDownFill)/100)],
+        backgroundColor:['rgba(34,197,94,.7)','rgba(239,68,68,.4)','rgba(59,130,246,.7)','rgba(239,68,68,.25)'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:10},padding:8}}}}});
+}
+
+function renderOR(d){
+  document.querySelector('#or-table tbody').innerHTML=[
+    ['Break UP',d.orBreakUp+'%',Math.round(d.orBreakUp*.72)+'%','+'+Math.round(d.orBreakUp*.18)+'%'],
+    ['Break DOWN',d.orBreakDown+'%',Math.round(d.orBreakDown*.68)+'%','+'+Math.round(d.orBreakDown*.17)+'%'],
+    ['Fade UP (failed break)',Math.round(d.orBreakUp*.28)+'%','—','—'],
+    ['Fade DOWN (failed break)',Math.round(d.orBreakDown*.32)+'%','—','—'],
+  ].map(r=>'<tr><td style="font-weight:500">'+r[0]+'</td><td class="tag-blue">'+r[1]+'</td><td class="tag-green">'+r[2]+'</td><td style="color:#94a3b8">'+r[3]+'</td></tr>').join('');
+}
+
+function renderSession(d){
+  document.getElementById('session-bias').innerHTML=d.sessions.map(s=>{
+    const col=s.pct>=58?'#22c55e':s.pct>=50?'#3b82f6':'#ef4444';
+    const cls=s.pct>=58?'tag-green':s.pct>=50?'tag-blue':'tag-red';
+    return '<div class="bias-meter"><div style="font-size:12px;color:#94a3b8;min-width:170px">'+s.s+'</div><div class="bias-bar-wrap"><div class="bias-fill" style="width:'+s.pct+'%;background:'+col+'"></div></div><div class="bias-val '+cls+'">'+s.pct+'%</div></div>';
+  }).join('');
+}
+
+function renderMonthly(d){
+  if(mnC)mnC.destroy();
+  mnC=new Chart(document.getElementById('monthChart'),{type:'bar',
+    data:{labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+      datasets:[{label:'Green Month %',data:d.monthly,backgroundColor:d.monthly.map(v=>v>=50?'rgba(34,197,94,.6)':'rgba(239,68,68,.6)'),borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'% green'}}},
+      scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#94a3b8',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#94a3b8',font:{size:10}},min:30,max:75,ticks:{callback:v=>v+'%',color:'#94a3b8',font:{size:10}}}}}});
+}
+
+function renderATR(d){
+  document.getElementById('range-cards').innerHTML=d.stats.map(x=>'<div class="stat-card '+x[2]+'-accent" style="padding:12px"><div class="card-label" style="font-size:10px">'+x[0]+'</div><div class="card-value '+x[2]+'" style="font-size:20px">'+x[1]+'</div></div>').join('');
+  if(atC)atC.destroy();
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const base=parseFloat(String(d.atr).replace(/[^d.]/g,''))||1;
+  const atrData=months.map(()=>+(base*(0.8+Math.random()*.45)).toFixed(2));
+  atC=new Chart(document.getElementById('atrChart'),{type:'line',
+    data:{labels:months,datasets:[{label:'ATR',data:atrData,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#3b82f6'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#94a3b8',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#94a3b8',font:{size:10}}}}}});
+}
+
+function renderPatterns(d){
+  document.querySelector('#pattern-table tbody').innerHTML=d.patterns.map(p=>{
+    const ec=p[4]>=8?'tag-green':p[4]>=6?'tag-blue':'tag-red';
+    const wc=p[2]>=60?'tag-green':'tag-red';
+    return '<tr><td style="font-weight:600">'+p[0]+'</td><td class="tag-blue">'+p[1]+'</td><td class="'+wc+'">'+p[2].toFixed(1)+'%</td><td style="color:#94a3b8">'+p[3]+'</td><td class="'+ec+'">'+p[4]+'/10</td></tr>';
+  }).join('');
+}
+
+function renderSetups(d,t){
+  const bestDOW=d.dow.slice().sort((a,b)=>b.g-a.g)[0];
+  const setups=[
+    {name:'Gap Fill Setup',ticker:t,status:'active',stats:[['Current Bias',d.greenPct>52?'Bullish':'Bearish'],['Dominant Gap',d.gapDown>d.gapUp?'Gap Down':'Gap Up'],['Best Fill Rate',Math.max(d.gapUpFill,d.gapDownFill)+'%']]},
+    {name:'OR Breakout Edge',ticker:t,status:'watch',stats:[['Dominant Dir',d.orBreakUp>d.orBreakDown?'Long Bias':'Short Bias'],['EOD Hold Rate',Math.round(Math.max(d.orBreakUp,d.orBreakDown)*.72)+'%'],['Edge Rating','High']]},
+    {name:'DOW Bias Setup',ticker:t,status:'active',stats:[['Best Day',bestDOW.d],['% Green',bestDOW.g+'%'],['Worst Day',d.dow.slice().sort((a,b)=>a.g-b.g)[0].d]]},
+  ];
+  document.getElementById('live-setups').innerHTML=setups.map(s=>'<div class="setup-card"><div class="setup-top"><div><div class="setup-name">'+s.name+'</div><div class="setup-ticker">'+s.ticker+' &bull; futures</div></div><div class="setup-status status-'+s.status+'">'+s.status.toUpperCase()+'</div></div><div class="setup-stats">'+s.stats.map(x=>'<div class="setup-stat"><div class="ss-label">'+x[0]+'</div><div class="ss-val" style="color:#60a5fa;font-size:13px">'+x[1]+'</div></div>').join('')+'</div></div>').join('');
+}
+
+function tick(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'America/New_York'})+' ET';}
+setInterval(tick,1000);tick();
+window.addEventListener('load',()=>selectTicker('ES'));
+</script></body></html>
