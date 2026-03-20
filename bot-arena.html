@@ -153,6 +153,32 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   .live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;display:inline-block}
 
+  /* CIVILIZATION JOURNEY */
+  .civ-road{grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden}
+  .civ-road::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),var(--cyan),var(--green))}
+  .civ-title{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .civ-track{position:relative;height:44px;margin:0 10px}
+  .civ-line{position:absolute;top:20px;left:0;right:0;height:4px;background:var(--border);border-radius:2px}
+  .civ-progress{position:absolute;top:20px;left:0;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--gold),var(--cyan));transition:width .8s;box-shadow:0 0 8px rgba(200,169,110,.4)}
+  .civ-milestone{position:absolute;top:10px;display:flex;flex-direction:column;align-items:center;transition:all .3s}
+  .civ-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:var(--bg);font-size:8px;display:flex;align-items:center;justify-content:center;z-index:2;transition:all .3s}
+  .civ-dot.reached{border-color:var(--gold);background:var(--gold);box-shadow:0 0 8px rgba(200,169,110,.6)}
+  .civ-dot.current{border-color:var(--cyan);background:var(--cyan);animation:pulse 1.5s infinite;box-shadow:0 0 12px rgba(0,212,255,.5)}
+  .civ-label{font-size:7px;color:var(--muted);letter-spacing:.5px;margin-top:3px;white-space:nowrap}
+  .civ-label.reached{color:var(--gold)}.civ-label.current{color:var(--cyan)}
+  .civ-rank{font-family:'Orbitron',sans-serif;font-size:9px;color:var(--muted);text-align:center;margin-top:8px;letter-spacing:1px}
+  .civ-rank strong{color:var(--gold)}
+  @keyframes glow{0%,100%{filter:drop-shadow(0 0 3px rgba(200,169,110,.3))}50%{filter:drop-shadow(0 0 8px rgba(200,169,110,.7))}}
+
+  /* REPORTS SECTION */
+  .reports-card{grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+  .report-block{background:rgba(0,0,0,.2);border-radius:6px;padding:8px 10px}
+  .report-title{font-family:'Orbitron',sans-serif;font-size:8px;color:var(--muted);letter-spacing:1.5px;margin-bottom:6px}
+  .heatmap-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .heat-cell{aspect-ratio:1;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;letter-spacing:.3px}
+  .report-row{display:flex;justify-content:space-between;font-size:9px;padding:2px 0;color:var(--muted)}
+  .report-row .rv{font-weight:600}
+
   /* TABLE VIEW */
   .poker-table{width:min(750px,90vw);height:min(450px,55vh);background:radial-gradient(ellipse at center,#1a3a2a 0%,#0d2218 60%,#091a12 100%);border-radius:200px;border:8px solid #2a1a0a;box-shadow:0 0 60px rgba(0,0,0,.6),inset 0 0 80px rgba(0,0,0,.3),0 0 0 12px #1a1008,0 0 0 14px #0d0a04;position:relative;display:flex;align-items:center;justify-content:center}
   .pentagram-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
@@ -207,12 +233,13 @@
 <body>
 <div id="app">
   <header>
-    <div class="logo"><span class="a">BOT ARENA</span> <span class="b">// TRADING FLOOR</span></div>
+    <div class="logo">🏛️ <span class="a">BOT ARENA</span> <span class="b">// TRADING FLOOR</span></div>
     <div class="market-ticker" id="ticker"></div>
     <div class="header-stats">
       <span>BOTS <strong id="h-bots">6</strong></span>
       <span>TRADES <strong id="h-trades">0</strong></span>
       <span class="vault-stat">VAULT <strong id="h-vault">$100,000</strong></span>
+      <span>NET <strong id="h-net" style="color:var(--gold)">$100,000</strong></span>
       <span>P&L <strong id="h-pnl">$0.00</strong></span>
       <span style="display:flex;align-items:center;gap:4px">🏆<div style="width:60px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div id="goal-bar" style="height:100%;background:var(--gold);border-radius:3px;width:10%;transition:width .5s"></div></div><strong id="goal-pct" style="color:var(--gold);font-size:8px">10%</strong></span>
     </div>
@@ -234,6 +261,7 @@
       <button class="size-btn" onclick="setGlobalSize(10,this)">10</button>
       <button class="size-btn" onclick="setGlobalSize(25,this)">25</button>
     </div>
+    <button class="ctrl-btn" id="prop-btn" onclick="togglePropFirm()" style="margin-left:8px;border-color:var(--pink);color:var(--pink)">PROP: OFF</button>
     <button class="ctrl-btn active" data-speed="1" onclick="setSpeed(1,this)" style="margin-left:auto">1X</button>
     <button class="ctrl-btn" data-speed="5" onclick="setSpeed(5,this)">5X</button>
     <button class="ctrl-btn" data-speed="20" onclick="setSpeed(20,this)">20X</button>
@@ -489,10 +517,13 @@ function simBot(bot){
     const pos=bot.position,price=state.prices[pos.sym];
     const diff=pos.side==='LONG'?price-pos.entry:pos.entry-price;
     const pnl=(diff/SYM_TICK[pos.sym])*SYM_TICKVAL[pos.sym]*pos.size;
-    const tp=(3+bot.patience*20)*SYM_TICKVAL[pos.sym]*pos.size;
-    const sl=(2+bot.patience*6)*SYM_TICKVAL[pos.sym]*pos.size;
-    const trail=pnl>tp*.5?sl*.5:sl;
-    if(pnl>=tp||pnl<=-trail||r<.015*bot.aggression){
+    // Asymmetric R:R — take profit is BIGGER than stop loss (edge)
+    const tp=(5+bot.patience*25)*SYM_TICKVAL[pos.sym]*pos.size;
+    const sl=(2+bot.patience*4)*SYM_TICKVAL[pos.sym]*pos.size;
+    // Trailing stop: once 60% to target, tighten stop to breakeven
+    const trail=pnl>tp*.6?Math.max(0,sl*.3):sl;
+    // Random exit much less likely — let trades run
+    if(pnl>=tp||pnl<=-trail||r<.005*bot.aggression){
       bot.pnl+=pnl;bot.trades++;
       if(pnl>0){bot.wins++;if(state.tick%3===0)soundWin()}else{bot.losses++;if(state.tick%5===0)soundLoss()}
       state.vault+=pos.margin+pnl;bot.borrowed-=pos.margin;
@@ -500,23 +531,56 @@ function simBot(bot){
       bot.history.push({sym:pos.sym,side:pos.side,pnl,size:pos.size,tick:state.tick});
       addLog(bot,pnl>0?'buy':'sell',`CLOSED ${pos.size}x ${pos.side} ${pos.sym} ${pnl>=0?'+':''}$${pnl.toFixed(2)}`);
       bot.position=null;
+      // BOT LEARNING: after a loss, slightly adjust strategy
+      if(pnl<0&&bot.losses>5){
+        bot.patience=Math.min(.95,bot.patience+.01); // get more patient
+        bot.aggression=Math.max(.1,bot.aggression-.005); // get less aggressive
+      }
     }
   }else{
-    const entryChance=.008*bot.aggression*state.speed;
+    // ENTRY: much pickier — need stronger confirmation
+    const entryChance=.005*bot.aggression*state.speed;
     if(r<entryChance){
       const botMarkets=bot.markets&&bot.markets.length?bot.markets:SYMBOLS;
       const sym=botMarkets[Math.floor(Math.random()*botMarkets.length)];
-      const h=priceHistory[sym],mom5=momentum(sym,5),mom20=momentum(sym,20),avg10=sma(h,10),avg30=sma(h,30),price=state.prices[sym];
-      let side=null;
-      if(bot.id==='viper'){if(mom5>0&&mom20>0)side='LONG';else if(mom5<0&&mom20<0)side='SHORT'}
-      else if(bot.id==='ghost'){if(price<avg30*.999)side='LONG';else if(price>avg30*1.001)side='SHORT'}
-      else if(bot.id==='stone'){if(mom20>0&&price>avg30&&mom5>0)side='LONG';else if(mom20<0&&price<avg30&&mom5<0)side='SHORT';else return}
-      else if(bot.id==='blaze'){if(mom5>0)side='LONG';else if(mom5<0)side='SHORT';else side=Math.random()>.5?'LONG':'SHORT'}
-      else if(bot.id==='nova'){if(avg10>avg30&&mom5>0)side='LONG';else if(avg10<avg30&&mom5<0)side='SHORT'}
+      const h=priceHistory[sym];
+      if(h.length<20)return; // need enough data
+      const mom5=momentum(sym,5),mom10=momentum(sym,10),mom20=momentum(sym,20);
+      const avg10=sma(h,10),avg20=sma(h,20),avg30=sma(h,30);
+      const price=state.prices[sym];
+      let side=null,confidence=0;
+
+      if(bot.id==='viper'){
+        // Need 3 timeframes agreeing
+        if(mom5>0&&mom10>0&&mom20>0&&price>avg20){side='LONG';confidence=2}
+        else if(mom5<0&&mom10<0&&mom20<0&&price<avg20){side='SHORT';confidence=2}
+      }else if(bot.id==='ghost'){
+        // Mean reversion: only fade BIG moves (2x normal), buy when oversold
+        const avgVol=Math.abs(mom20)/20;
+        if(price<avg30*.998&&mom5<-avgVol*1.5){side='LONG';confidence=3} // oversold bounce
+        else if(price>avg30*1.002&&mom5>avgVol*1.5){side='SHORT';confidence=3} // overbought fade
+      }else if(bot.id==='stone'){
+        // Triple confirmation: trend + MA + momentum all agree
+        if(mom20>0&&price>avg30&&price>avg20&&mom5>0&&mom10>0){side='LONG';confidence=4}
+        else if(mom20<0&&price<avg30&&price<avg20&&mom5<0&&mom10<0){side='SHORT';confidence=4}
+        else return;
+      }else if(bot.id==='blaze'){
+        // Scalper: quick in/out on micro moves, but needs clear direction
+        if(mom5>0&&price>avg10){side='LONG';confidence=1}
+        else if(mom5<0&&price<avg10){side='SHORT';confidence=1}
+      }else if(bot.id==='nova'){
+        // MA crossover + RSI proxy (momentum vs average)
+        const rsiProxy=mom10>0?60:40; // simplified RSI
+        if(avg10>avg20&&avg20>avg30&&rsiProxy>50&&mom5>0){side='LONG';confidence=3}
+        else if(avg10<avg20&&avg20<avg30&&rsiProxy<50&&mom5<0){side='SHORT';confidence=3}
+      }
       if(!side)return;
-      const size=Math.max(1,Math.round(bot.prefSize*globalSizeMult));
+
+      // Scale size by confidence: higher confidence = bigger position
+      const baseSize=Math.max(1,Math.round(bot.prefSize*globalSizeMult));
+      const size=Math.max(1,Math.round(baseSize*(confidence>=3?1.5:confidence>=2?1:0.5)));
       const margin=price*size*.05;
-      if(margin>state.vault)return;
+      if(margin>state.vault||margin>state.vault*.1)return; // don't use more than 10% of vault
       state.vault-=margin;bot.borrowed+=margin;
       bot.position={side,sym,entry:price,size,margin};
       if(state.tick%4===0)soundBuy();
@@ -576,15 +640,20 @@ function renderMiniTable(){
 
 function renderBots(){
   const arena=document.getElementById('arena');arena.innerHTML='';
+  arena.innerHTML+=renderCivRoad();
   arena.innerHTML+=renderOneCard(state.you,true);
   for(const bot of state.bots)arena.innerHTML+=renderOneCard(bot,false);
   arena.innerHTML+=renderMiniTable();
+  arena.innerHTML+=renderReports();
   requestAnimationFrame(()=>{
     document.querySelectorAll('.line-chart').forEach(el=>{
       const id=el.dataset.id,color=el.dataset.color;
       const data=id==='you'?state.you.pnlHistory:state.bots.find(b=>b.id===id)?.pnlHistory;
       if(data)drawLineChart(el.querySelector('canvas'),data,color);
     });
+    // Vault chart
+    const vc=document.getElementById('vault-chart-canvas');
+    if(vc)drawLineChart(vc,state.vaultHistory,'#c8a96e');
   });
 }
 
@@ -738,6 +807,12 @@ function updateHeader(){
   pnlEl.textContent=`${total>=0?'+':''}$${total.toFixed(2)}`;
   pnlEl.style.color=total>=0?'var(--green)':'var(--red)';
   document.getElementById('h-vault').textContent=`$${state.vault.toLocaleString('en-US',{maximumFractionDigits:0})}`;
+  // Net house = vault + unrealized P&L of all open positions
+  const totalBorrowed=state.bots.reduce((a,b)=>a+(b.borrowed||0),0)+(state.you.borrowed||0);
+  const netEl=document.getElementById('h-net');
+  const netVal=state.vault+totalBorrowed;
+  netEl.textContent=`$${netVal.toLocaleString('en-US',{maximumFractionDigits:0})}`;
+  netEl.style.color=netVal>=VAULT_START?'var(--gold)':'var(--red)';
   state.vaultHistory.push(state.vault);if(state.vaultHistory.length>120)state.vaultHistory.shift();
   // $1M GOAL
   const goalPct=Math.min(100,Math.max(0,(state.vault/1000000)*100));
@@ -867,7 +942,7 @@ setInterval(updateClock,1000);updateClock();
 let loopId=null;
 function tick(){
   state.tick++;simPrices();updatePriceHistory();
-  state.bots.forEach(simBot);simAutoYou();vaultInvest();
+  state.bots.forEach(simBot);simAutoYou();vaultInvest();checkPropFirm();
   if(currentView==='cards')renderBots();else renderTable();
   renderLog();renderLeaderboard();renderTicker();updateHeader();updateSentiment();renderYourPos();renderVaultHoldings();
   if(state.tick%20===0){renderWatchlist()}
@@ -915,6 +990,147 @@ async function fetchAllPrices(){
 }
 fetchAllPrices();fetchWatchPrices();
 setInterval(fetchAllPrices,30000);setInterval(fetchWatchPrices,60000);
+
+// ═══ PROP FIRM MODE ═══
+let propFirmOn=false;
+function togglePropFirm(){
+  propFirmOn=!propFirmOn;
+  const btn=document.getElementById('prop-btn');
+  btn.textContent=propFirmOn?'PROP: ON':'PROP: OFF';
+  btn.classList.toggle('active',propFirmOn);
+  btn.style.background=propFirmOn?'rgba(255,107,157,.15)':'';
+  addLog({name:'SYSTEM',color:'var(--pink)'},'buy',propFirmOn?'🏢 PROP FIRM MODE — bots with >$500 drawdown get FIRED':'Prop firm mode disabled');
+}
+window.togglePropFirm=togglePropFirm;
+
+function checkPropFirm(){
+  if(!propFirmOn)return;
+  state.bots.forEach(bot=>{
+    if(bot.enabled&&bot.pnl<-500){
+      bot.enabled=false;
+      if(bot.position){
+        const pos=bot.position,price=state.prices[pos.sym];
+        const diff=pos.side==='LONG'?price-pos.entry:pos.entry-price;
+        const pnl=(diff/SYM_TICK[pos.sym])*SYM_TICKVAL[pos.sym]*pos.size;
+        bot.pnl+=pnl;bot.trades++;if(pnl>0)bot.wins++;else bot.losses++;
+        state.vault+=pos.margin+pnl;bot.borrowed-=pos.margin;
+        bot.position=null;
+      }
+      addLog(bot,'sell',`🔥 FIRED by prop firm — drawdown exceeded $500`);
+      soundLoss();
+    }
+  });
+}
+
+// ═══ CIVILIZATION JOURNEY ═══
+const CIV_MILESTONES=[
+  {val:100000,label:'$100K',title:'Street Trader',emoji:'🏪'},
+  {val:150000,label:'$150K',title:'Corner Office',emoji:'🏢'},
+  {val:200000,label:'$200K',title:'Fund Manager',emoji:'💼'},
+  {val:300000,label:'$300K',title:'Market Maker',emoji:'📊'},
+  {val:400000,label:'$400K',title:'Whale',emoji:'🐋'},
+  {val:500000,label:'$500K',title:'Tycoon',emoji:'🎩'},
+  {val:650000,label:'$650K',title:'Wall St King',emoji:'👑'},
+  {val:800000,label:'$800K',title:'Empire Builder',emoji:'🏰'},
+  {val:1000000,label:'$1M',title:'LEGEND',emoji:'🏆'},
+];
+
+function getCivRank(){
+  for(let i=CIV_MILESTONES.length-1;i>=0;i--){
+    if(state.vault>=CIV_MILESTONES[i].val)return CIV_MILESTONES[i];
+  }
+  return CIV_MILESTONES[0];
+}
+
+function renderCivRoad(){
+  const v=state.vault;
+  const minV=CIV_MILESTONES[0].val,maxV=CIV_MILESTONES[CIV_MILESTONES.length-1].val;
+  const pct=Math.min(100,Math.max(0,((v-minV)/(maxV-minV))*100));
+  const rank=getCivRank();
+
+  let milestonesHtml=CIV_MILESTONES.map((m,i)=>{
+    const pos=((m.val-minV)/(maxV-minV))*100;
+    const reached=v>=m.val;
+    const isCurrent=rank===m;
+    const cls=isCurrent?'current':reached?'reached':'';
+    return`<div class="civ-milestone" style="left:${pos}%"><div class="civ-dot ${cls}">${reached?m.emoji:''}</div><div class="civ-label ${cls}">${m.label}</div></div>`;
+  }).join('');
+
+  return`<div class="civ-road">
+    <div class="civ-title">${rank.emoji} CIVILIZATION JOURNEY <span style="color:var(--muted);font-size:8px;font-weight:400">// $100K → $1M</span></div>
+    <div class="civ-track">
+      <div class="civ-line"></div>
+      <div class="civ-progress" style="width:${pct}%"></div>
+      ${milestonesHtml}
+    </div>
+    <div class="civ-rank">RANK: <strong>${rank.emoji} ${rank.title}</strong> — <span style="color:var(--cyan)">$${v.toLocaleString('en-US',{maximumFractionDigits:0})}</span> / $1,000,000 <span style="color:var(--muted)">(${pct.toFixed(1)}%)</span></div>
+  </div>`;
+}
+
+// ═══ REPORTS & HEATMAP ═══
+function renderReports(){
+  const bots=[...state.bots,state.you];
+  // Profit by market heatmap
+  const marketPnl={};
+  SYMBOLS.forEach(s=>marketPnl[s]={});
+  state.bots.forEach(bot=>{
+    bot.history.forEach(h=>{
+      if(!marketPnl[h.sym])marketPnl[h.sym]={};
+      if(!marketPnl[h.sym][bot.id])marketPnl[h.sym][bot.id]=0;
+      marketPnl[h.sym][bot.id]+=h.pnl;
+    });
+  });
+
+  const allBotIds=[...state.bots.map(b=>b.id)];
+  let maxAbs=1;
+  SYMBOLS.forEach(s=>allBotIds.forEach(id=>{const v=Math.abs(marketPnl[s]?.[id]||0);if(v>maxAbs)maxAbs=v}));
+
+  let heatCells=`<div class="heat-cell" style="color:var(--muted)"></div>`;
+  allBotIds.forEach(id=>{const b=state.bots.find(x=>x.id===id);heatCells+=`<div class="heat-cell" style="color:${b?.color||'var(--text)'}">${(b?.name||id).slice(0,3)}</div>`});
+  // Add YOU column header but skip data for now (YOU doesn't have history array like bots)
+
+  SYMBOLS.forEach(sym=>{
+    heatCells+=`<div class="heat-cell" style="color:var(--text);font-size:7px">${sym}</div>`;
+    allBotIds.forEach(id=>{
+      const val=marketPnl[sym]?.[id]||0;
+      const intensity=Math.min(1,Math.abs(val)/maxAbs);
+      const bg=val>0?`rgba(0,255,157,${intensity*.5})`:(val<0?`rgba(255,71,87,${intensity*.5})`:'rgba(255,255,255,.03)');
+      heatCells+=`<div class="heat-cell" style="background:${bg};color:${val>=0?'var(--green)':'var(--red)'}">${val!==0?(val>0?'+':'')+val.toFixed(0):''}</div>`;
+    });
+  });
+
+  // Best/worst stats
+  const sorted=[...state.bots].sort((a,b)=>b.pnl-a.pnl);
+  const bestBot=sorted[0],worstBot=sorted[sorted.length-1];
+  const totalTrades=state.bots.reduce((a,b)=>a+b.trades,0)+state.you.trades;
+  const totalWins=state.bots.reduce((a,b)=>a+b.wins,0)+state.you.wins;
+  const overallWR=totalTrades?((totalWins/totalTrades)*100).toFixed(0):0;
+
+  // Net house value (vault minus bot borrowed)
+  const totalBorrowed=state.bots.reduce((a,b)=>a+(b.borrowed||0),0)+(state.you.borrowed||0);
+  const netHouse=state.vault+totalBorrowed; // vault has already had margin deducted, so add back to get true equity
+
+  return`<div class="reports-card">
+    <div class="report-block">
+      <div class="report-title" style="color:var(--gold)">📊 PROFIT HEATMAP</div>
+      <div class="heatmap-grid" style="grid-template-columns:repeat(${allBotIds.length+1},1fr)">${heatCells}</div>
+    </div>
+    <div class="report-block">
+      <div class="report-title" style="color:var(--cyan)">📈 ARENA STATS</div>
+      <div class="report-row"><span>Total Trades</span><span class="rv" style="color:var(--text)">${totalTrades}</span></div>
+      <div class="report-row"><span>Win Rate</span><span class="rv" style="color:var(--cyan)">${overallWR}%</span></div>
+      <div class="report-row"><span>Best Bot</span><span class="rv" style="color:var(--green)">${bestBot?bestBot.emoji+' '+bestBot.name:'-'} +$${bestBot?.pnl?.toFixed(0)||0}</span></div>
+      <div class="report-row"><span>Worst Bot</span><span class="rv" style="color:var(--red)">${worstBot?worstBot.emoji+' '+worstBot.name:'-'} $${worstBot?.pnl?.toFixed(0)||0}</span></div>
+      <div class="report-row"><span>Margin Out</span><span class="rv" style="color:var(--amber)">$${totalBorrowed.toFixed(0)}</span></div>
+      <div class="report-row"><span>Net House Equity</span><span class="rv" style="color:var(--gold)">$${netHouse.toLocaleString('en-US',{maximumFractionDigits:0})}</span></div>
+      <div class="report-row"><span>Vault P&L</span><span class="rv" style="color:${state.vault>=VAULT_START?'var(--green)':'var(--red)'}">${state.vault>=VAULT_START?'+':''}$${(state.vault-VAULT_START).toFixed(0)}</span></div>
+    </div>
+    <div class="report-block">
+      <div class="report-title" style="color:var(--green)">🏛️ VAULT CHART</div>
+      <div style="height:50px"><canvas id="vault-chart-canvas" style="width:100%;height:100%"></canvas></div>
+    </div>
+  </div>`;
+}
 
 // ═══ INIT ═══
 fetchRealNews();
