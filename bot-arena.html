@@ -154,13 +154,13 @@
   .live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;display:inline-block}
 
   /* COLLAPSIBLE SECTIONS */
-  .section-toggle{grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .section-toggle{grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:8px}
   .section-header{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;user-select:none;transition:background .15s}
   .section-header:hover{background:rgba(0,212,255,.03)}
   .section-header .chevron{font-size:10px;color:var(--muted);transition:transform .2s}
   .section-header .chevron.open{transform:rotate(90deg)}
-  .section-body{padding:0 14px 12px;display:none}
-  .section-body.open{display:block}
+  .section-body{max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease;padding:0 14px}
+  .section-body.open{max-height:2000px;padding:8px 14px 14px;overflow:visible}
 
   /* CIVILIZATION JOURNEY */
   .civ-road{position:relative}
@@ -241,6 +241,8 @@
     .mobile-toggle{display:block}
     .controls{flex-wrap:wrap;gap:4px}
     .market-ticker{display:none}
+    .arena{-webkit-overflow-scrolling:touch;overflow-y:scroll!important}
+    html,body{overflow:auto!important}
   }
 </style>
 </head>
@@ -264,6 +266,7 @@
     <button class="ctrl-btn go" onclick="startAll()"><span class="live-dot"></span> START</button>
     <button class="ctrl-btn stop" onclick="stopAll()">STOP</button>
     <button class="ctrl-btn" onclick="resetAll()">RESET</button>
+    <button class="ctrl-btn" onclick="openRules()" style="margin-left:4px;border-color:var(--muted);color:var(--muted)">❓</button>
     <button class="ctrl-btn" id="view-cards" onclick="setView('cards')" style="margin-left:10px;border-color:var(--gold);color:var(--gold)">CARDS</button>
     <button class="ctrl-btn" id="view-table" onclick="setView('table')">TABLE</button>
     <div class="size-control">
@@ -614,9 +617,9 @@ function simBot(bot){
       }
       if(!side)return;
 
-      // Scale size by confidence, capped at 10 contracts max per bot trade
-      const baseSize=Math.min(5,Math.max(1,Math.round(bot.prefSize*Math.min(globalSizeMult,5))));
-      const size=Math.min(10,Math.max(1,Math.round(baseSize*(confidence>=3?1.5:confidence>=2?1:0.5))));
+      // Scale size by confidence
+      const baseSize=Math.max(1,Math.round(bot.prefSize*globalSizeMult));
+      const size=Math.max(1,Math.round(baseSize*(confidence>=3?1.5:confidence>=2?1:0.5)));
       const margin=price*size*.05;
       if(margin>state.vault||margin>state.vault*.1)return; // don't use more than 10% of vault
       state.vault-=margin;bot.borrowed+=margin;
@@ -684,7 +687,7 @@ function renderMiniTableInner(){
 }
 
 // Section toggle state
-const sectionOpen={reports:true,journey:true,rules:false};
+const sectionOpen={reports:true,journey:true};
 function toggleSection(id){
   sectionOpen[id]=!sectionOpen[id];
   const body=document.getElementById('sec-body-'+id);
@@ -701,7 +704,6 @@ function updateSectionContent(id){
   if(!body)return;
   if(id==='reports')body.innerHTML=renderReportsInner();
   else if(id==='journey')body.innerHTML=renderCivRoadInner();
-  else if(id==='rules')body.innerHTML=renderRulesInner();
   if(id==='reports'){
     requestAnimationFrame(()=>{const vc=document.getElementById('vault-chart-canvas');if(vc)drawLineChart(vc,state.vaultHistory,'#c8a96e')});
   }
@@ -731,7 +733,6 @@ function buildFullArena(){
   // Reports open by default, above journey
   html+=renderCollapsible('reports','📊 REPORTS & ANALYTICS','var(--cyan)');
   html+=renderCollapsible('journey','🏆 CIVILIZATION JOURNEY','var(--gold)');
-  html+=renderCollapsible('rules','📖 HOW TO PLAY','var(--muted)');
   requestAnimationFrame(()=>{
     document.querySelectorAll('.line-chart').forEach(el=>{
       const id=el.dataset.id,color=el.dataset.color;
@@ -739,7 +740,7 @@ function buildFullArena(){
       if(data)drawLineChart(el.querySelector('canvas'),data,color);
     });
     // Fill section content
-    for(const id of ['reports','journey','rules']){if(sectionOpen[id])updateSectionContent(id)}
+    for(const id of ['reports','journey']){if(sectionOpen[id])updateSectionContent(id)}
   });
   return html;
 }
@@ -949,6 +950,14 @@ window.openYouSettings=openYouSettings;
 
 function closeSettings(){document.getElementById('settings-overlay').classList.remove('open')}
 window.closeSettings=closeSettings;
+
+function openRules(){
+  document.getElementById('settings-panel').innerHTML=`
+    <div class="settings-header"><span style="font-size:22px">📖</span><div><div style="font-family:Orbitron;font-size:13px;font-weight:700;color:var(--cyan)">HOW TO PLAY</div><div style="font-size:9px;color:var(--muted)">Bot Arena Trading Floor</div></div><button class="settings-close" onclick="closeSettings()">✕</button></div>
+    ${renderRulesInner()}`;
+  document.getElementById('settings-overlay').classList.add('open');
+}
+window.openRules=openRules;
 function updateBotParam(id,p,v){const bot=state.bots.find(b=>b.id===id);if(bot)bot[p]=v}
 window.updateBotParam=updateBotParam;
 function resetBotDefaults(id){
