@@ -541,8 +541,8 @@ function simBot(bot){
     if(pnl>=tp||pnl<=-trail||r<.005*bot.aggression){
       bot.pnl+=pnl;bot.trades++;
       if(pnl>0){bot.wins++;if(state.tick%3===0)soundWin();
-        // HOUSE TAX: 10% of profits go to vault
-        const tax=pnl*.1;state.vault+=tax;bot.pnl-=tax;pnl-=tax;
+        // HOUSE TAX: 5% of profits go to vault
+        const tax=pnl*.05;state.vault+=tax;bot.pnl-=tax;pnl-=tax;
         if(!state.taxCollected)state.taxCollected=0;state.taxCollected+=tax;
       }else{bot.losses++;if(state.tick%5===0)soundLoss()}
       state.vault+=pos.margin+pnl;bot.borrowed-=pos.margin;
@@ -614,9 +614,9 @@ function simBot(bot){
       }
       if(!side)return;
 
-      // Scale size by confidence: higher confidence = bigger position
-      const baseSize=Math.max(1,Math.round(bot.prefSize*globalSizeMult));
-      const size=Math.max(1,Math.round(baseSize*(confidence>=3?1.5:confidence>=2?1:0.5)));
+      // Scale size by confidence, capped at 10 contracts max per bot trade
+      const baseSize=Math.min(5,Math.max(1,Math.round(bot.prefSize*Math.min(globalSizeMult,5))));
+      const size=Math.min(10,Math.max(1,Math.round(baseSize*(confidence>=3?1.5:confidence>=2?1:0.5))));
       const margin=price*size*.05;
       if(margin>state.vault||margin>state.vault*.1)return; // don't use more than 10% of vault
       state.vault-=margin;bot.borrowed+=margin;
@@ -670,10 +670,13 @@ function drawLineChart(canvas,data,color){
 
 // ═══ RENDER CARDS ═══
 function renderMiniTable(){
+  return`<div id="mini-table-area" style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px">${renderMiniTableInner()}</div>`;
+}
+function renderMiniTableInner(){
   const all=[...state.bots,state.you];
   const sorted=[...all].sort((a,b)=>b.pnl-a.pnl);
   const vaultPct=(state.vault/1000000*100).toFixed(1);
-  return`<div style="grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap">
+  return`<div style="display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap">
     <div style="text-align:center"><div style="font-size:20px">🏛️</div><div style="font-family:Orbitron;font-size:11px;color:var(--gold)">${'$'+state.vault.toLocaleString('en-US',{maximumFractionDigits:0})}</div><div style="font-size:7px;color:var(--muted);letter-spacing:1px">VAULT → $1M (${vaultPct}%)</div></div>
     <div style="width:1px;height:30px;background:var(--border)"></div>
     ${sorted.map(b=>{const c=b.pnl>=0?'var(--green)':'var(--red)';const dot=b.enabled===false?'🔴':'';return`<div style="text-align:center;min-width:50px"><div style="font-size:16px">${b.emoji}</div><div style="font-size:8px;font-weight:700;color:${b.color}">${b.name}${dot}</div><div style="font-family:Orbitron;font-size:9px;color:${c}">${b.pnl>=0?'+':''}$${b.pnl.toFixed(0)}</div></div>`}).join('')}
@@ -681,39 +684,147 @@ function renderMiniTable(){
 }
 
 // Section toggle state
-const sectionOpen={journey:true,scoreboard:true,reports:false,rules:false};
-function toggleSection(id){sectionOpen[id]=!sectionOpen[id];renderBots()}
+const sectionOpen={reports:true,journey:true,rules:false};
+function toggleSection(id){
+  sectionOpen[id]=!sectionOpen[id];
+  const body=document.getElementById('sec-body-'+id);
+  const chev=document.getElementById('sec-chev-'+id);
+  if(body){body.classList.toggle('open',sectionOpen[id])}
+  if(chev){chev.classList.toggle('open',sectionOpen[id])}
+  // Re-render the inner content when opening
+  if(sectionOpen[id])updateSectionContent(id);
+}
 window.toggleSection=toggleSection;
 
+function updateSectionContent(id){
+  const body=document.getElementById('sec-body-'+id);
+  if(!body)return;
+  if(id==='reports')body.innerHTML=renderReportsInner();
+  else if(id==='journey')body.innerHTML=renderCivRoadInner();
+  else if(id==='rules')body.innerHTML=renderRulesInner();
+  if(id==='reports'){
+    requestAnimationFrame(()=>{const vc=document.getElementById('vault-chart-canvas');if(vc)drawLineChart(vc,state.vaultHistory,'#c8a96e')});
+  }
+}
+
+// Throttled UI rendering — max 4fps for DOM, simulation runs full speed
+let lastRenderTime=0;
+const RENDER_INTERVAL=250; // ms between DOM updates
+
 function renderBots(){
-  const arena=document.getElementById('arena');arena.innerHTML='';
-  // Bot cards FIRST (full size, visible)
-  arena.innerHTML+=renderOneCard(state.you,true);
-  for(const bot of state.bots)arena.innerHTML+=renderOneCard(bot,false);
-  // Collapsible sections below
-  arena.innerHTML+=renderMiniTable();
-  arena.innerHTML+=renderCollapsible('journey','🏆 CIVILIZATION JOURNEY','var(--gold)',renderCivRoadInner());
-  arena.innerHTML+=renderCollapsible('reports','📊 REPORTS & ANALYTICS','var(--cyan)',renderReportsInner());
-  arena.innerHTML+=renderCollapsible('rules','📖 HOW TO PLAY','var(--muted)',renderRulesInner());
+  const arena=document.getElementById('arena');
+  // Only do full rebuild if structure doesn't exist yet
+  if(!document.getElementById('bot-cards-grid')){
+    arena.innerHTML=buildFullArena();
+    return;
+  }
+  // Fast update: only update bot card data, not structure
+  updateBotCards();
+}
+
+function buildFullArena(){
+  let html='<div id="bot-cards-grid" style="display:contents">';
+  html+=renderOneCard(state.you,true);
+  for(const bot of state.bots)html+=renderOneCard(bot,false);
+  html+='</div>';
+  html+=renderMiniTable();
+  // Reports open by default, above journey
+  html+=renderCollapsible('reports','📊 REPORTS & ANALYTICS','var(--cyan)');
+  html+=renderCollapsible('journey','🏆 CIVILIZATION JOURNEY','var(--gold)');
+  html+=renderCollapsible('rules','📖 HOW TO PLAY','var(--muted)');
   requestAnimationFrame(()=>{
     document.querySelectorAll('.line-chart').forEach(el=>{
       const id=el.dataset.id,color=el.dataset.color;
       const data=id==='you'?state.you.pnlHistory:state.bots.find(b=>b.id===id)?.pnlHistory;
       if(data)drawLineChart(el.querySelector('canvas'),data,color);
     });
-    const vc=document.getElementById('vault-chart-canvas');
-    if(vc)drawLineChart(vc,state.vaultHistory,'#c8a96e');
+    // Fill section content
+    for(const id of ['reports','journey','rules']){if(sectionOpen[id])updateSectionContent(id)}
   });
+  return html;
 }
 
-function renderCollapsible(id,title,color,content){
+function updateBotCards(){
+  // Update each card's P&L, stats, position without rebuilding structure
+  const allBots=[state.you,...state.bots];
+  allBots.forEach(bot=>{
+    const isYou=bot===state.you;
+    const cardId=isYou?'card-you':`card-${bot.id}`;
+    const card=document.getElementById(cardId);
+    if(!card)return;
+
+    // Update P&L number
+    const pnlEl=card.querySelector('.bot-pnl');
+    if(pnlEl){
+      pnlEl.textContent=`${bot.pnl>=0?'+':''}$${bot.pnl.toFixed(2)}`;
+      pnlEl.className=`bot-pnl ${bot.pnl>0?'pnl-up':bot.pnl<0?'pnl-down':'pnl-flat'}`;
+    }
+    // Update card border
+    const cls=isYou?'you-card':bot.pnl>0?'positive':bot.pnl<0?'negative':'neutral';
+    card.className=`bot-card ${cls}`;
+
+    // Update stats
+    const stats=card.querySelectorAll('.stat-val');
+    if(stats.length>=3){
+      stats[0].textContent=bot.trades;
+      stats[1].textContent=bot.trades>0?((bot.wins/bot.trades)*100).toFixed(0)+'%':'–%';
+      stats[2].textContent=`${bot.wins}W/${bot.losses}L`;
+    }
+
+    // Update position display
+    const posContainer=card.querySelector('.bot-positions-area');
+    if(posContainer){
+      if(isYou){
+        if(bot.positions&&bot.positions.length>0){
+          posContainer.innerHTML=bot.positions.map(pos=>{
+            const d=pos.side==='LONG'?state.prices[pos.sym]-pos.entry:pos.entry-state.prices[pos.sym];
+            const tp=(d/SYM_TICK[pos.sym])*SYM_TICKVAL[pos.sym]*pos.size;
+            const c=tp>=0?'var(--green)':'var(--red)';
+            return`<div class="bot-position"><span class="pos-side ${pos.side==='LONG'?'pos-long':'pos-short'}">${pos.size}x${pos.side[0]}</span><span class="pos-sym">${pos.sym}</span><span class="pos-pnl" style="color:${c}">${tp>=0?'+':''}$${tp.toFixed(2)}</span></div>`;
+          }).join('');
+        }else{posContainer.innerHTML=`<div class="bot-position"><span class="pos-side pos-flat">FLAT</span><span class="pos-entry">ready to trade</span></div>`}
+      }else if(bot.position){
+        const d=bot.position.side==='LONG'?state.prices[bot.position.sym]-bot.position.entry:bot.position.entry-state.prices[bot.position.sym];
+        const tp=(d/SYM_TICK[bot.position.sym])*SYM_TICKVAL[bot.position.sym]*bot.position.size;
+        const c=tp>=0?'var(--green)':'var(--red)';
+        posContainer.innerHTML=`<div class="bot-position"><span class="pos-side ${bot.position.side==='LONG'?'pos-long':'pos-short'}">${bot.position.size}x ${bot.position.side}</span><span class="pos-sym">${bot.position.sym}</span><span class="pos-entry">@ ${bot.position.entry.toFixed(2)}</span><span class="pos-pnl" style="color:${c}">${tp>=0?'+':''}$${tp.toFixed(2)}</span></div>`;
+      }else{posContainer.innerHTML=`<div class="bot-position"><span class="pos-side pos-flat">FLAT</span><span class="pos-entry">scanning...</span></div>`}
+    }
+
+    // Update activity dot
+    const dot=card.querySelector('.activity-dot');
+    if(dot){
+      const isActive=isYou?bot.positions?.length>0:!!bot.position;
+      const isDisabled=!isYou&&bot.enabled===false;
+      dot.style.background=isDisabled?'var(--red)':isActive?'var(--green)':'var(--muted)';
+    }
+
+    // Update line chart
+    const chartEl=card.querySelector('.line-chart canvas');
+    if(chartEl){
+      const data=isYou?bot.pnlHistory:bot.pnlHistory;
+      drawLineChart(chartEl,data,bot.color);
+    }
+  });
+
+  // Update mini table
+  const miniTable=document.getElementById('mini-table-area');
+  if(miniTable)miniTable.innerHTML=renderMiniTableInner();
+
+  // Update sections every ~2 seconds to save perf
+  if(state.tick%8===0){
+    for(const id of ['reports','journey']){if(sectionOpen[id])updateSectionContent(id)}
+  }
+}
+
+function renderCollapsible(id,title,color){
   const isOpen=sectionOpen[id];
   return`<div class="section-toggle" style="grid-column:1/-1">
     <div class="section-header" onclick="toggleSection('${id}')">
-      <span class="chevron ${isOpen?'open':''}">▶</span>
+      <span class="chevron ${isOpen?'open':''}" id="sec-chev-${id}">▶</span>
       <span style="font-family:Orbitron;font-size:9px;color:${color};letter-spacing:1.5px">${title}</span>
     </div>
-    <div class="section-body ${isOpen?'open':''}">${content}</div>
+    <div class="section-body ${isOpen?'open':''}" id="sec-body-${id}"></div>
   </div>`;
 }
 
@@ -745,7 +856,8 @@ function renderOneCard(bot,isYou){
   }else{posHtml=`<div class="bot-position"><span class="pos-side pos-flat">FLAT</span><span class="pos-entry">scanning...</span></div>`}
 
   const clickAttr=isYou?`onclick="openYouSettings()"`:`onclick="openSettings('${bot.id}')"`;
-  return`<div class="bot-card ${pnlClass}" ${clickAttr}>
+  const cardId=isYou?'card-you':`card-${bot.id}`;
+  return`<div class="bot-card ${pnlClass}" id="${cardId}" ${clickAttr}>
     <div class="bot-top">
       <div class="bot-avatar" style="background:${bot.color}22;border:1px solid ${bot.color}44">${bot.emoji}<div class="activity-dot" style="background:${activityColor}"></div></div>
       <div><div class="bot-name" style="color:${bot.color}">${bot.name}</div><div class="bot-style">${bot.style||''}</div></div>
@@ -757,7 +869,7 @@ function renderOneCard(bot,isYou){
       <div class="stat-box"><div class="stat-val">${wr}%</div><div class="stat-label">WIN RATE</div></div>
       <div class="stat-box"><div class="stat-val">${bot.wins}W/${bot.losses}L</div><div class="stat-label">W/L</div></div>
     </div>
-    ${posHtml}
+    <div class="bot-positions-area">${posHtml}</div>
     <div class="line-chart" data-id="${isYou?'you':bot.id}" data-color="${bot.color}"><canvas></canvas></div>
   </div>`;
 }
@@ -1000,18 +1112,27 @@ function updateClock(){const now=new Date();document.getElementById('clock').tex
 setInterval(updateClock,1000);updateClock();
 
 // ═══ GAME LOOP ═══
-let loopId=null;
+let loopId=null,renderQueued=false;
 function tick(){
+  // Simulation runs every tick (fast)
   state.tick++;simPrices();updatePriceHistory();
   state.bots.forEach(simBot);simAutoYou();vaultInvest();checkPropFirm();
-  if(currentView==='cards')renderBots();else renderTable();
-  renderLog();renderLeaderboard();renderTicker();updateHeader();updateSentiment();renderYourPos();renderVaultHoldings();
-  if(state.tick%20===0){renderWatchlist()}
+  // UI rendering throttled to ~4fps max to prevent freezing
+  if(!renderQueued){
+    renderQueued=true;
+    requestAnimationFrame(()=>{
+      renderQueued=false;
+      if(currentView==='cards')renderBots();else renderTable();
+      renderLog();renderLeaderboard();renderTicker();updateHeader();updateSentiment();renderYourPos();renderVaultHoldings();
+      if(state.tick%20===0){renderWatchlist()}
+    });
+  }
 }
 
-function startAll(){if(state.running)return;state.running=true;initAudio();soundStart();addLog({name:'SYSTEM',color:'var(--cyan)'},'buy','Arena started — all bots live');loopId=setInterval(tick,Math.max(50,500/state.speed))}
+function startAll(){if(state.running)return;state.running=true;initAudio();soundStart();addLog({name:'SYSTEM',color:'var(--cyan)'},'buy','Arena started — all bots live');loopId=setInterval(tick,Math.max(30,500/state.speed))}
 function stopAll(){state.running=false;clearInterval(loopId);soundStop();addLog({name:'SYSTEM',color:'var(--cyan)'},'sell','Arena paused');renderLog()}
-function resetAll(){stopAll();soundReset();state.goalReached=false;state.taxCollected=0;state.bots.forEach(b=>{b.pnl=0;b.trades=0;b.wins=0;b.losses=0;b.position=null;b.history=[];b.pnlHistory=[0];b.borrowed=0;b.enabled=true});
+function forceFullRebuild(){const a=document.getElementById('bot-cards-grid');if(a)a.remove()}
+function resetAll(){stopAll();soundReset();forceFullRebuild();state.goalReached=false;state.taxCollected=0;state.bots.forEach(b=>{b.pnl=0;b.trades=0;b.wins=0;b.losses=0;b.position=null;b.history=[];b.pnlHistory=[0];b.borrowed=0;b.enabled=true;b.firedTick=null});
   state.you={...state.you,pnl:0,trades:0,wins:0,losses:0,positions:[],pnlHistory:[0],borrowed:0};
   state.logs=[];state.prices={...SYM_PRICES};state.tick=0;state.vault=VAULT_START;state.vaultHistory=[VAULT_START];
   state.vaultHoldings={GOLD:0,TBILLS:0,CASH:VAULT_START};
@@ -1069,6 +1190,7 @@ function checkPropFirm(){
   state.bots.forEach(bot=>{
     if(bot.enabled&&bot.pnl<-500){
       bot.enabled=false;
+      bot.firedTick=state.tick;
       if(bot.position){
         const pos=bot.position,price=state.prices[pos.sym];
         const diff=pos.side==='LONG'?price-pos.entry:pos.entry-price;
@@ -1077,8 +1199,17 @@ function checkPropFirm(){
         state.vault+=pos.margin+pnl;bot.borrowed-=pos.margin;
         bot.position=null;
       }
-      addLog(bot,'sell',`🔥 FIRED by prop firm — drawdown exceeded $500`);
+      addLog(bot,'sell',`🔥 FIRED — drawdown exceeded $500. Rehiring in 50 ticks with safer params`);
       soundLoss();
+    }
+    // Rehire fired bots after 50 ticks with adjusted params
+    if(!bot.enabled&&bot.firedTick&&(state.tick-bot.firedTick)>50){
+      bot.enabled=true;
+      bot.pnl=0;bot.trades=0;bot.wins=0;bot.losses=0; // clean slate
+      bot.patience=Math.min(.95,bot.patience+.1); // more patient
+      bot.aggression=Math.max(.1,bot.aggression-.1); // less aggressive
+      bot.firedTick=null;
+      addLog(bot,'buy',`♻️ REHIRED with safer params (patience ${(bot.patience*100).toFixed(0)}%, aggression ${(bot.aggression*100).toFixed(0)}%)`);
     }
   });
 }
@@ -1200,7 +1331,7 @@ function renderRulesInner(){
       <li><span class="emoji-label">🤖</span><strong>AI Bots</strong> — 6 bots with unique strategies. Each borrows vault margin (5% of trade notional). Click any bot card to adjust aggression, patience, size, and markets.</li>
       <li><span class="emoji-label">🎯</span><strong>Manual Trading (YOU)</strong> — Use the right panel to place your own trades. Pick symbol, size, long/short. Or enable AUTO to let the system trade for you.</li>
       <li><span class="emoji-label">🔮</span><strong>ORACLE Bot</strong> — Expert quant that uses multi-signal fusion. Only trades A+ setups with 4+ confirming signals.</li>
-      <li><span class="emoji-label">💰</span><strong>House Tax</strong> — The house takes 10% of every bot winning trade as tax. This is how the vault grows even when bots are flat overall.</li>
+      <li><span class="emoji-label">💰</span><strong>House Tax</strong> — The house takes 5% of every bot winning trade as tax. This is how the vault grows even when bots are flat overall.</li>
       <li><span class="emoji-label">📊</span><strong>Vault Investments</strong> — Idle vault cash auto-invests: 40% cash, 30% T-Bills (earn interest), 30% Gold (tracks real gold price).</li>
     </ul>
     <h3>GAME MODES</h3>
