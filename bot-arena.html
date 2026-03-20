@@ -86,29 +86,28 @@
   .table-view.active{display:flex}.arena.active{display:grid}.arena:not(.active){display:none}
 
   /* BOT CARDS */
-  .bot-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;transition:all .3s;position:relative;overflow:hidden;cursor:pointer}
+  .bot-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;transition:border-color .3s;position:relative;cursor:pointer;min-height:auto}
   .bot-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
   .bot-card.positive{border-color:rgba(0,255,157,.2)}.bot-card.positive::before{background:var(--green)}
   .bot-card.negative{border-color:rgba(255,71,87,.2)}.bot-card.negative::before{background:var(--red)}
   .bot-card.neutral::before{background:var(--muted)}
   .bot-card.you-card{border-color:rgba(0,212,255,.3)}.bot-card.you-card::before{background:var(--cyan)}
-  .bot-card.flash{animation:cardFlash .4s}
-  @keyframes cardFlash{0%{box-shadow:0 0 0 transparent}50%{box-shadow:0 0 15px rgba(0,212,255,.3)}100%{box-shadow:0 0 0 transparent}}
 
   .bot-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
   .bot-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;position:relative}
   .activity-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;border:1px solid var(--surface)}
   .bot-name{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px}
   .bot-style{font-size:8px;color:var(--muted);letter-spacing:.5px}
-  .bot-pnl{margin-left:auto;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700}
+  .bot-pnl{margin-left:auto;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;white-space:nowrap}
   .pnl-up{color:var(--green)}.pnl-down{color:var(--red)}.pnl-flat{color:var(--muted)}
 
+  .bot-detail{overflow:visible}
   .bot-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin:5px 0}
   .stat-box{background:rgba(0,0,0,.3);border-radius:3px;padding:3px;text-align:center}
   .stat-val{font-size:10px;font-weight:600;color:var(--text)}
   .stat-label{font-size:7px;color:var(--muted);letter-spacing:1px}
 
-  .bot-position{background:rgba(0,0,0,.2);border-radius:3px;padding:4px 6px;font-size:9px;display:flex;align-items:center;gap:6px;margin-top:3px}
+  .bot-position{background:rgba(0,0,0,.2);border-radius:3px;padding:4px 6px;font-size:9px;display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap}
   .pos-side{font-weight:700;font-size:8px;padding:1px 5px;border-radius:2px;letter-spacing:1px}
   .pos-long{background:rgba(0,255,157,.15);color:var(--green)}.pos-short{background:rgba(255,71,87,.15);color:var(--red)}
   .pos-flat{background:rgba(74,85,104,.3);color:var(--muted)}
@@ -241,8 +240,11 @@
     .mobile-toggle{display:block}
     .controls{flex-wrap:wrap;gap:4px}
     .market-ticker{display:none}
-    .arena{-webkit-overflow-scrolling:touch;overflow-y:scroll!important}
-    html,body{overflow:auto!important}
+    #clock{display:none}
+    .header-stats{font-size:9px;gap:8px}
+    .arena{-webkit-overflow-scrolling:touch;overflow-y:scroll!important;grid-template-columns:1fr!important;padding:8px}
+    .bot-card{padding:8px}
+    .bot-pnl{font-size:12px}
   }
 </style>
 </head>
@@ -396,7 +398,7 @@ const VAULT_START=100000;
 
 let state={
   running:false,speed:1,tick:0,
-  vault:VAULT_START,vaultHistory:[VAULT_START],
+  vault:VAULT_START,vaultHistory:[VAULT_START],taxCollected:0,
   vaultHoldings:{GOLD:0,TBILLS:0,CASH:VAULT_START},
   bots:BOT_DEFAULTS.map(b=>({...b,pnl:0,trades:0,wins:0,losses:0,position:null,history:[],pnlHistory:[0],borrowed:0,enabled:true,markets:[...SYMBOLS]})),
   you:{name:'YOU',emoji:'🎯',color:'#00d4ff',style:'MANUAL TRADER',pnl:0,trades:0,wins:0,losses:0,positions:[],pnlHistory:[0],borrowed:0,
@@ -536,8 +538,9 @@ function simBot(bot){
     const diff=pos.side==='LONG'?price-pos.entry:pos.entry-price;
     const pnl=(diff/SYM_TICK[pos.sym])*SYM_TICKVAL[pos.sym]*pos.size;
     // Asymmetric R:R — take profit is BIGGER than stop loss (edge)
-    const tp=(5+bot.patience*25)*SYM_TICKVAL[pos.sym]*pos.size;
-    const sl=(2+bot.patience*4)*SYM_TICKVAL[pos.sym]*pos.size;
+    const rmult=bot.riskMult||1,tmult=bot.targetMult||1;
+    const tp=(5+bot.patience*25)*SYM_TICKVAL[pos.sym]*pos.size*tmult;
+    const sl=(2+bot.patience*4)*SYM_TICKVAL[pos.sym]*pos.size*rmult;
     // Trailing stop: once 60% to target, tighten stop to breakeven
     const trail=pnl>tp*.6?Math.max(0,sl*.3):sl;
     // Random exit much less likely — let trades run
@@ -546,7 +549,7 @@ function simBot(bot){
       if(pnl>0){bot.wins++;if(state.tick%3===0)soundWin();
         // HOUSE TAX: 5% of profits go to vault
         const tax=pnl*.05;state.vault+=tax;bot.pnl-=tax;pnl-=tax;
-        if(!state.taxCollected)state.taxCollected=0;state.taxCollected+=tax;
+        state.taxCollected=(state.taxCollected||0)+tax;
       }else{bot.losses++;if(state.tick%5===0)soundLoss()}
       state.vault+=pos.margin+pnl;bot.borrowed-=pos.margin;
       bot.pnlHistory.push(bot.pnl);if(bot.pnlHistory.length>60)bot.pnlHistory.shift();
@@ -885,11 +888,17 @@ function openSettings(botId){
     <div class="slider-group"><div class="slider-label"><span>AGGRESSION</span><span class="slider-val" id="sv-agg">${(bot.aggression*100).toFixed(0)}%</span></div><input type="range" min="5" max="100" value="${bot.aggression*100}" oninput="updateBotParam('${botId}','aggression',this.value/100);document.getElementById('sv-agg').textContent=this.value+'%'"/></div>
     <div class="slider-group"><div class="slider-label"><span>PATIENCE</span><span class="slider-val" id="sv-pat">${(bot.patience*100).toFixed(0)}%</span></div><input type="range" min="5" max="100" value="${bot.patience*100}" oninput="updateBotParam('${botId}','patience',this.value/100);document.getElementById('sv-pat').textContent=this.value+'%'"/></div>
     <div class="slider-group"><div class="slider-label"><span>PREFERRED SIZE</span><span class="slider-val" id="sv-size">${bot.prefSize}</span></div><input type="range" min="1" max="10" value="${bot.prefSize}" oninput="updateBotParam('${botId}','prefSize',parseInt(this.value));document.getElementById('sv-size').textContent=this.value"/></div>
+    <div class="slider-group"><div class="slider-label"><span>RISK (STOP LOSS)</span><span class="slider-val" id="sv-risk">${((bot.riskMult||1)*100).toFixed(0)}%</span></div><input type="range" min="20" max="300" value="${(bot.riskMult||1)*100}" oninput="updateBotParam('${botId}','riskMult',this.value/100);document.getElementById('sv-risk').textContent=this.value+'%'"/></div>
+    <div class="slider-group"><div class="slider-label"><span>TARGET (TAKE PROFIT)</span><span class="slider-val" id="sv-target">${((bot.targetMult||1)*100).toFixed(0)}%</span></div><input type="range" min="50" max="500" value="${(bot.targetMult||1)*100}" oninput="updateBotParam('${botId}','targetMult',this.value/100);document.getElementById('sv-target').textContent=this.value+'%'"/></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:9px">
       <div class="stat-box"><div class="stat-val">${bot.trades}</div><div class="stat-label">TRADES</div></div>
       <div class="stat-box"><div class="stat-val" style="color:${bot.pnl>=0?'var(--green)':'var(--red)'}">${bot.pnl>=0?'+':''}$${bot.pnl.toFixed(2)}</div><div class="stat-label">P&L</div></div>
       <div class="stat-box"><div class="stat-val">${bot.trades?((bot.wins/bot.trades)*100).toFixed(0):'–'}%</div><div class="stat-label">WIN RATE</div></div>
       <div class="stat-box"><div class="stat-val" style="color:var(--gold)">$${(bot.borrowed||0).toFixed(0)}</div><div class="stat-label">BORROWED</div></div>
+    </div>
+    <div style="margin-top:8px;font-size:9px">
+      <div class="slider-label"><span>P&L BY MARKET</span></div>
+      ${(()=>{const mp={};bot.history.forEach(h=>{if(!mp[h.sym])mp[h.sym]=0;mp[h.sym]+=h.pnl});return SYMBOLS.map(s=>{const v=mp[s]||0;if(v===0)return'';const c=v>0?'var(--green)':'var(--red)';return`<div style="display:flex;justify-content:space-between;padding:2px 4px;background:rgba(0,0,0,.15);border-radius:2px;margin:1px 0"><span style="color:var(--text)">${s}</span><span style="color:${c};font-weight:600">${v>0?'+':''}$${v.toFixed(0)}</span></div>`}).join('')||'<div style="color:var(--muted);padding:2px 0">No trades yet</div>'})()}
     </div>
     <div style="margin-top:8px">
       <div class="slider-label"><span>MARKETS</span></div>
@@ -994,7 +1003,7 @@ function updateHeader(){
   const netVal=state.vault+totalBorrowed;
   netEl.textContent=`$${netVal.toLocaleString('en-US',{maximumFractionDigits:0})}`;
   netEl.style.color=netVal>=VAULT_START?'var(--gold)':'var(--red)';
-  state.vaultHistory.push(state.vault);if(state.vaultHistory.length>120)state.vaultHistory.shift();
+  state.vaultHistory.push(state.vault);if(state.vaultHistory.length>500)state.vaultHistory.shift();
   // $1M GOAL
   const goalPct=Math.min(100,Math.max(0,(state.vault/1000000)*100));
   document.getElementById('goal-bar').style.width=goalPct+'%';
@@ -1304,7 +1313,7 @@ function renderReportsInner(){
   const overallWR=totalTrades?((totalWins/totalTrades)*100).toFixed(0):0;
   const totalBorrowed=state.bots.reduce((a,b)=>a+(b.borrowed||0),0)+(state.you.borrowed||0);
   const netHouse=state.vault+totalBorrowed;
-  const taxCollected=state.taxCollected||0;
+  const taxCollected=state.taxCollected??0;
 
   return`<div class="reports-inner">
     <div class="report-block">
