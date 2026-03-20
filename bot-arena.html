@@ -536,22 +536,21 @@ function simBot(bot){
   if(bot.position){
     const pos=bot.position,price=state.prices[pos.sym];
     const diff=pos.side==='LONG'?price-pos.entry:pos.entry-price;
-    const pnl=(diff/SYM_TICK[pos.sym])*SYM_TICKVAL[pos.sym]*pos.size;
-    // Asymmetric R:R — take profit is BIGGER than stop loss (edge)
+    let pnl=(diff/SYM_TICK[pos.sym])*SYM_TICKVAL[pos.sym]*pos.size;
+    // Scalp R:R — quick TP (prices mean-revert), wider SL (give room)
     const rmult=bot.riskMult||1,tmult=bot.targetMult||1;
-    const tp=(5+bot.patience*25)*SYM_TICKVAL[pos.sym]*pos.size*tmult;
-    const sl=(2+bot.patience*4)*SYM_TICKVAL[pos.sym]*pos.size*rmult;
-    // Trailing stop: once 60% to target, tighten stop to breakeven
-    const trail=pnl>tp*.6?Math.max(0,sl*.3):sl;
-    // Random exit much less likely — let trades run
-    if(pnl>=tp||pnl<=-trail||r<.005*bot.aggression){
+    const tp=(2+bot.patience*6)*SYM_TICKVAL[pos.sym]*pos.size*tmult;
+    const sl=(5+bot.patience*15)*SYM_TICKVAL[pos.sym]*pos.size*rmult;
+    // Trail to breakeven once 70% to target
+    const trail=pnl>tp*.7?Math.max(0,sl*.2):sl;
+    if(pnl>=tp||pnl<=-trail||r<.003*bot.aggression){
+      // HOUSE TAX: 5% of winning trades
+      let tax=0;
+      if(pnl>0){tax=pnl*.05;pnl-=tax;state.taxCollected=(state.taxCollected||0)+tax}
       bot.pnl+=pnl;bot.trades++;
-      if(pnl>0){bot.wins++;if(state.tick%3===0)soundWin();
-        // HOUSE TAX: 5% of profits go to vault
-        const tax=pnl*.05;state.vault+=tax;bot.pnl-=tax;pnl-=tax;
-        state.taxCollected=(state.taxCollected||0)+tax;
-      }else{bot.losses++;if(state.tick%5===0)soundLoss()}
-      state.vault+=pos.margin+pnl;bot.borrowed-=pos.margin;
+      if(pnl>0){bot.wins++;if(state.tick%3===0)soundWin()}
+      else{bot.losses++;if(state.tick%5===0)soundLoss()}
+      state.vault+=pos.margin+pnl+tax;bot.borrowed-=pos.margin;
       bot.pnlHistory.push(bot.pnl);if(bot.pnlHistory.length>60)bot.pnlHistory.shift();
       bot.history.push({sym:pos.sym,side:pos.side,pnl,size:pos.size,tick:state.tick});
       addLog(bot,pnl>0?'buy':'sell',`CLOSED ${pos.size}x ${pos.side} ${pos.sym} ${pnl>=0?'+':''}$${pnl.toFixed(2)}`);
@@ -580,10 +579,9 @@ function simBot(bot){
         if(mom5>0&&mom10>0&&mom20>0&&price>avg20){side='LONG';confidence=2}
         else if(mom5<0&&mom10<0&&mom20<0&&price<avg20){side='SHORT';confidence=2}
       }else if(bot.id==='ghost'){
-        // Mean reversion: only fade BIG moves (2x normal), buy when oversold
-        const avgVol=Math.abs(mom20)/20;
-        if(price<avg30*.998&&mom5<-avgVol*1.5){side='LONG';confidence=3} // oversold bounce
-        else if(price>avg30*1.002&&mom5>avgVol*1.5){side='SHORT';confidence=3} // overbought fade
+        // Mean reversion: fade moves when price deviates from average
+        if(price<avg20&&mom5<0){side='LONG';confidence=3} // below avg, buy the dip
+        else if(price>avg20&&mom5>0){side='SHORT';confidence=3} // above avg, sell the rip
       }else if(bot.id==='stone'){
         // Triple confirmation: trend + MA + momentum all agree
         if(mom20>0&&price>avg30&&price>avg20&&mom5>0&&mom10>0){side='LONG';confidence=4}
@@ -599,24 +597,16 @@ function simBot(bot){
         if(avg10>avg20&&avg20>avg30&&rsiProxy>50&&mom5>0){side='LONG';confidence=3}
         else if(avg10<avg20&&avg20<avg30&&rsiProxy<50&&mom5<0){side='SHORT';confidence=3}
       }else if(bot.id==='oracle'){
-        // EXPERT QUANT: multi-signal fusion — only trades when 4+ signals agree
-        const avgVol=Math.abs(mom20)/20||.001;
-        const trendUp=avg10>avg20&&avg20>avg30;
-        const trendDn=avg10<avg20&&avg20<avg30;
-        const momUp=mom5>0&&mom10>0&&mom20>0;
-        const momDn=mom5<0&&mom10<0&&mom20<0;
-        const prAbove=price>avg30;const prBelow=price<avg30;
-        const volExpand=Math.abs(mom5)>avgVol*1.2; // volatility expansion
-        const pullback=trendUp&&mom5<0&&price>avg20; // buy the dip in uptrend
-        const pullbackDn=trendDn&&mom5>0&&price<avg20; // sell the rip in downtrend
-        let signals=0;
-        if(trendUp)signals++;if(momUp)signals++;if(prAbove)signals++;if(volExpand)signals++;
-        if(signals>=4){side='LONG';confidence=5}
-        else if(pullback&&price>avg30){side='LONG';confidence=4} // buy the dip
-        signals=0;
-        if(trendDn)signals++;if(momDn)signals++;if(prBelow)signals++;if(volExpand)signals++;
-        if(signals>=4){side='SHORT';confidence=5}
-        else if(pullbackDn&&price<avg30&&!side){side='SHORT';confidence=4}
+        // EXPERT QUANT: adapts to market regime (mean-reversion primary)
+        // Key insight: simulated prices mean-revert, so fade deviations from average
+        const deviation=(price-avg20)/avg20; // how far from mean
+        const momReversal=mom5*mom10<0; // momentum changing direction
+        // Mean reversion: price deviated from avg AND momentum reversing
+        if(deviation<-.0002&&(momReversal||mom5>0)){side='LONG';confidence=4}
+        else if(deviation>.0002&&(momReversal||mom5<0)){side='SHORT';confidence=4}
+        // Momentum continuation only when very strong
+        else if(mom5>0&&mom10>0&&mom20>0&&price>avg30){side='LONG';confidence=3}
+        else if(mom5<0&&mom10<0&&mom20<0&&price<avg30){side='SHORT';confidence=3}
       }
       if(!side)return;
 
@@ -728,14 +718,14 @@ function renderBots(){
 }
 
 function buildFullArena(){
-  let html='<div id="bot-cards-grid" style="display:contents">';
+  // Reports & journey at top, then bot cards
+  html+=renderCollapsible('reports','📊 REPORTS & ANALYTICS','var(--cyan)');
+  html+=renderCollapsible('journey','🏆 CIVILIZATION JOURNEY','var(--gold)');
+  html+='<div id="bot-cards-grid" style="display:contents">';
   html+=renderOneCard(state.you,true);
   for(const bot of state.bots)html+=renderOneCard(bot,false);
   html+='</div>';
   html+=renderMiniTable();
-  // Reports open by default, above journey
-  html+=renderCollapsible('reports','📊 REPORTS & ANALYTICS','var(--cyan)');
-  html+=renderCollapsible('journey','🏆 CIVILIZATION JOURNEY','var(--gold)');
   requestAnimationFrame(()=>{
     document.querySelectorAll('.line-chart').forEach(el=>{
       const id=el.dataset.id,color=el.dataset.color;
