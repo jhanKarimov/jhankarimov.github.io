@@ -153,11 +153,19 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   .live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;display:inline-block}
 
+  /* COLLAPSIBLE SECTIONS */
+  .section-toggle{grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .section-header{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;user-select:none;transition:background .15s}
+  .section-header:hover{background:rgba(0,212,255,.03)}
+  .section-header .chevron{font-size:10px;color:var(--muted);transition:transform .2s}
+  .section-header .chevron.open{transform:rotate(90deg)}
+  .section-body{padding:0 14px 12px;display:none}
+  .section-body.open{display:block}
+
   /* CIVILIZATION JOURNEY */
-  .civ-road{grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden}
-  .civ-road::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),var(--cyan),var(--green))}
-  .civ-title{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
-  .civ-track{position:relative;height:44px;margin:0 10px}
+  .civ-road{position:relative}
+  .civ-title{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--gold);letter-spacing:2px;display:flex;align-items:center;gap:8px}
+  .civ-track{position:relative;height:44px;margin:8px 10px 0}
   .civ-line{position:absolute;top:20px;left:0;right:0;height:4px;background:var(--border);border-radius:2px}
   .civ-progress{position:absolute;top:20px;left:0;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--gold),var(--cyan));transition:width .8s;box-shadow:0 0 8px rgba(200,169,110,.4)}
   .civ-milestone{position:absolute;top:10px;display:flex;flex-direction:column;align-items:center;transition:all .3s}
@@ -168,16 +176,22 @@
   .civ-label.reached{color:var(--gold)}.civ-label.current{color:var(--cyan)}
   .civ-rank{font-family:'Orbitron',sans-serif;font-size:9px;color:var(--muted);text-align:center;margin-top:8px;letter-spacing:1px}
   .civ-rank strong{color:var(--gold)}
-  @keyframes glow{0%,100%{filter:drop-shadow(0 0 3px rgba(200,169,110,.3))}50%{filter:drop-shadow(0 0 8px rgba(200,169,110,.7))}}
 
   /* REPORTS SECTION */
-  .reports-card{grid-column:1/-1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+  .reports-inner{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
   .report-block{background:rgba(0,0,0,.2);border-radius:6px;padding:8px 10px}
   .report-title{font-family:'Orbitron',sans-serif;font-size:8px;color:var(--muted);letter-spacing:1.5px;margin-bottom:6px}
-  .heatmap-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-  .heat-cell{aspect-ratio:1;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;letter-spacing:.3px}
+  .heatmap-grid{display:grid;gap:2px}
+  .heat-cell{border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;letter-spacing:.3px;padding:4px 2px}
   .report-row{display:flex;justify-content:space-between;font-size:9px;padding:2px 0;color:var(--muted)}
   .report-row .rv{font-weight:600}
+
+  /* RULES SECTION */
+  .rules-inner{font-size:9px;color:var(--muted);line-height:1.5}
+  .rules-inner h3{font-family:'Orbitron',sans-serif;font-size:9px;color:var(--cyan);letter-spacing:1px;margin:8px 0 4px}
+  .rules-inner h3:first-child{margin-top:0}
+  .rules-inner li{margin-left:12px;margin-bottom:2px}
+  .rules-inner .emoji-label{font-size:11px;margin-right:4px}
 
   /* TABLE VIEW */
   .poker-table{width:min(750px,90vw);height:min(450px,55vh);background:radial-gradient(ellipse at center,#1a3a2a 0%,#0d2218 60%,#091a12 100%);border-radius:200px;border:8px solid #2a1a0a;box-shadow:0 0 60px rgba(0,0,0,.6),inset 0 0 80px rgba(0,0,0,.3),0 0 0 12px #1a1008,0 0 0 14px #0d0a04;position:relative;display:flex;align-items:center;justify-content:center}
@@ -236,7 +250,7 @@
     <div class="logo">🏛️ <span class="a">BOT ARENA</span> <span class="b">// TRADING FLOOR</span></div>
     <div class="market-ticker" id="ticker"></div>
     <div class="header-stats">
-      <span>BOTS <strong id="h-bots">6</strong></span>
+      <span>BOTS <strong id="h-bots">7</strong></span>
       <span>TRADES <strong id="h-trades">0</strong></span>
       <span class="vault-stat">VAULT <strong id="h-vault">$100,000</strong></span>
       <span>NET <strong id="h-net" style="color:var(--gold)">$100,000</strong></span>
@@ -358,6 +372,7 @@ const BOT_DEFAULTS=[
   {id:'stone',name:'STONE',emoji:'🗿',color:'#64748b',style:'PATIENT SNIPER',personality:'Only A+ setups. One trade a day. Massive R:R targets.',traits:['SELECTIVE','BIG R:R','LOW FREQ','DISCIPLINE'],prefSize:3,aggression:.2,patience:.9},
   {id:'blaze',name:'BLAZE',emoji:'🔥',color:'#ff4757',style:'HIGH FREQUENCY',personality:'Rapid-fire. 50+ trades/day, tiny profits each. The 1-tick game.',traits:['VOLUME','SCALP','SMALL EDGE','SPEED'],prefSize:1,aggression:.9,patience:.1},
   {id:'nova',name:'NOVA',emoji:'⭐',color:'#f59e0b',style:'INDICATOR NERD',personality:'RSI, VWAP, EMA crossovers, Bollinger. Balanced approach.',traits:['TECHNICAL','RSI','VWAP','BALANCED'],prefSize:2,aggression:.5,patience:.5},
+  {id:'oracle',name:'ORACLE',emoji:'🔮',color:'#e879f9',style:'EXPERT QUANT',personality:'Multi-signal quant. Combines momentum, mean reversion, volatility regime. Trades only A+ setups with optimal sizing.',traits:['QUANT','MULTI-SIGNAL','ADAPTIVE','EDGE'],prefSize:2,aggression:.4,patience:.8},
 ];
 
 const SYMBOLS=['MES','MNQ','MGC','MCL','M2K','EURUSD','GBPUSD'];
@@ -525,7 +540,11 @@ function simBot(bot){
     // Random exit much less likely — let trades run
     if(pnl>=tp||pnl<=-trail||r<.005*bot.aggression){
       bot.pnl+=pnl;bot.trades++;
-      if(pnl>0){bot.wins++;if(state.tick%3===0)soundWin()}else{bot.losses++;if(state.tick%5===0)soundLoss()}
+      if(pnl>0){bot.wins++;if(state.tick%3===0)soundWin();
+        // HOUSE TAX: 10% of profits go to vault
+        const tax=pnl*.1;state.vault+=tax;bot.pnl-=tax;pnl-=tax;
+        if(!state.taxCollected)state.taxCollected=0;state.taxCollected+=tax;
+      }else{bot.losses++;if(state.tick%5===0)soundLoss()}
       state.vault+=pos.margin+pnl;bot.borrowed-=pos.margin;
       bot.pnlHistory.push(bot.pnl);if(bot.pnlHistory.length>60)bot.pnlHistory.shift();
       bot.history.push({sym:pos.sym,side:pos.side,pnl,size:pos.size,tick:state.tick});
@@ -573,6 +592,25 @@ function simBot(bot){
         const rsiProxy=mom10>0?60:40; // simplified RSI
         if(avg10>avg20&&avg20>avg30&&rsiProxy>50&&mom5>0){side='LONG';confidence=3}
         else if(avg10<avg20&&avg20<avg30&&rsiProxy<50&&mom5<0){side='SHORT';confidence=3}
+      }else if(bot.id==='oracle'){
+        // EXPERT QUANT: multi-signal fusion — only trades when 4+ signals agree
+        const avgVol=Math.abs(mom20)/20||.001;
+        const trendUp=avg10>avg20&&avg20>avg30;
+        const trendDn=avg10<avg20&&avg20<avg30;
+        const momUp=mom5>0&&mom10>0&&mom20>0;
+        const momDn=mom5<0&&mom10<0&&mom20<0;
+        const prAbove=price>avg30;const prBelow=price<avg30;
+        const volExpand=Math.abs(mom5)>avgVol*1.2; // volatility expansion
+        const pullback=trendUp&&mom5<0&&price>avg20; // buy the dip in uptrend
+        const pullbackDn=trendDn&&mom5>0&&price<avg20; // sell the rip in downtrend
+        let signals=0;
+        if(trendUp)signals++;if(momUp)signals++;if(prAbove)signals++;if(volExpand)signals++;
+        if(signals>=4){side='LONG';confidence=5}
+        else if(pullback&&price>avg30){side='LONG';confidence=4} // buy the dip
+        signals=0;
+        if(trendDn)signals++;if(momDn)signals++;if(prBelow)signals++;if(volExpand)signals++;
+        if(signals>=4){side='SHORT';confidence=5}
+        else if(pullbackDn&&price<avg30&&!side){side='SHORT';confidence=4}
       }
       if(!side)return;
 
@@ -591,15 +629,19 @@ function simBot(bot){
 
 // ═══ VAULT AUTO-INVEST ═══
 function vaultInvest(){
-  // House allocates idle cash: 40% cash, 30% T-Bills, 30% Gold
+  // Smart house allocation: adapts to market conditions
   const total=state.vault;
-  const targetCash=total*.4,targetTbills=total*.3,targetGold=total*.3;
-  state.vaultHoldings.CASH=targetCash;
-  state.vaultHoldings.TBILLS=targetTbills;
-  state.vaultHoldings.GOLD=targetGold;
-  // T-Bills earn tiny interest every tick
-  state.vault+=state.vaultHoldings.TBILLS*0.00001;
-  // Gold fluctuates with MGC
+  // If gold is trending up, allocate more to gold; if markets volatile, more to T-Bills
+  const goldMom=priceHistory.MGC?.length>10?momentum('MGC',10):0;
+  const goldBias=goldMom>0?.4:.2; // 20-40% gold based on momentum
+  const tbillPct=.35;
+  const cashPct=1-goldBias-tbillPct;
+  state.vaultHoldings.CASH=total*cashPct;
+  state.vaultHoldings.TBILLS=total*tbillPct;
+  state.vaultHoldings.GOLD=total*goldBias;
+  // T-Bills earn interest (risk-free yield ~4.5% annual, per tick)
+  state.vault+=state.vaultHoldings.TBILLS*0.000015;
+  // Gold tracks real MGC price changes
   if(realBasePrices.MGC){
     const goldChg=(state.prices.MGC-realBasePrices.MGC)/realBasePrices.MGC;
     state.vault+=state.vaultHoldings.GOLD*goldChg*0.001;
@@ -638,23 +680,41 @@ function renderMiniTable(){
   </div>`;
 }
 
+// Section toggle state
+const sectionOpen={journey:true,scoreboard:true,reports:false,rules:false};
+function toggleSection(id){sectionOpen[id]=!sectionOpen[id];renderBots()}
+window.toggleSection=toggleSection;
+
 function renderBots(){
   const arena=document.getElementById('arena');arena.innerHTML='';
-  arena.innerHTML+=renderCivRoad();
+  // Bot cards FIRST (full size, visible)
   arena.innerHTML+=renderOneCard(state.you,true);
   for(const bot of state.bots)arena.innerHTML+=renderOneCard(bot,false);
+  // Collapsible sections below
   arena.innerHTML+=renderMiniTable();
-  arena.innerHTML+=renderReports();
+  arena.innerHTML+=renderCollapsible('journey','🏆 CIVILIZATION JOURNEY','var(--gold)',renderCivRoadInner());
+  arena.innerHTML+=renderCollapsible('reports','📊 REPORTS & ANALYTICS','var(--cyan)',renderReportsInner());
+  arena.innerHTML+=renderCollapsible('rules','📖 HOW TO PLAY','var(--muted)',renderRulesInner());
   requestAnimationFrame(()=>{
     document.querySelectorAll('.line-chart').forEach(el=>{
       const id=el.dataset.id,color=el.dataset.color;
       const data=id==='you'?state.you.pnlHistory:state.bots.find(b=>b.id===id)?.pnlHistory;
       if(data)drawLineChart(el.querySelector('canvas'),data,color);
     });
-    // Vault chart
     const vc=document.getElementById('vault-chart-canvas');
     if(vc)drawLineChart(vc,state.vaultHistory,'#c8a96e');
   });
+}
+
+function renderCollapsible(id,title,color,content){
+  const isOpen=sectionOpen[id];
+  return`<div class="section-toggle" style="grid-column:1/-1">
+    <div class="section-header" onclick="toggleSection('${id}')">
+      <span class="chevron ${isOpen?'open':''}">▶</span>
+      <span style="font-family:Orbitron;font-size:9px;color:${color};letter-spacing:1.5px">${title}</span>
+    </div>
+    <div class="section-body ${isOpen?'open':''}">${content}</div>
+  </div>`;
 }
 
 function renderOneCard(bot,isYou){
@@ -883,11 +943,12 @@ function renderNews(){
 // ═══ TABLE VIEW ═══
 const TABLE_SEATS=[
   {top:'-55px',left:'50%',transform:'translateX(-50%)'},
-  {top:'20%',right:'-80px',transform:'translateY(-50%)'},
-  {bottom:'20%',right:'-80px',transform:'translateY(50%)'},
-  {bottom:'-55px',right:'28%'},
-  {bottom:'-55px',left:'28%'},
-  {top:'20%',left:'-80px',transform:'translateY(-50%)'},
+  {top:'10%',right:'-80px'},
+  {bottom:'10%',right:'-80px'},
+  {bottom:'-55px',right:'30%'},
+  {bottom:'-55px',left:'30%'},
+  {top:'10%',left:'-80px'},
+  {bottom:'-55px',left:'50%',transform:'translateX(-50%)'},
 ];
 const SYMBOL_CARDS={MES:{sym:'S&P',color:'#333'},MNQ:{sym:'NQ',color:'#e74c3c'},MGC:{sym:'AU',color:'#f1c40f'},MCL:{sym:'OIL',color:'#333'},M2K:{sym:'2K',color:'#e74c3c'},EURUSD:{sym:'€/$',color:'#2980b9'},GBPUSD:{sym:'£/$',color:'#8e44ad'}};
 
@@ -950,7 +1011,7 @@ function tick(){
 
 function startAll(){if(state.running)return;state.running=true;initAudio();soundStart();addLog({name:'SYSTEM',color:'var(--cyan)'},'buy','Arena started — all bots live');loopId=setInterval(tick,Math.max(50,500/state.speed))}
 function stopAll(){state.running=false;clearInterval(loopId);soundStop();addLog({name:'SYSTEM',color:'var(--cyan)'},'sell','Arena paused');renderLog()}
-function resetAll(){stopAll();soundReset();state.goalReached=false;state.bots.forEach(b=>{b.pnl=0;b.trades=0;b.wins=0;b.losses=0;b.position=null;b.history=[];b.pnlHistory=[0];b.borrowed=0;b.enabled=true});
+function resetAll(){stopAll();soundReset();state.goalReached=false;state.taxCollected=0;state.bots.forEach(b=>{b.pnl=0;b.trades=0;b.wins=0;b.losses=0;b.position=null;b.history=[];b.pnlHistory=[0];b.borrowed=0;b.enabled=true});
   state.you={...state.you,pnl:0,trades:0,wins:0,losses:0,positions:[],pnlHistory:[0],borrowed:0};
   state.logs=[];state.prices={...SYM_PRICES};state.tick=0;state.vault=VAULT_START;state.vaultHistory=[VAULT_START];
   state.vaultHoldings={GOLD:0,TBILLS:0,CASH:VAULT_START};
@@ -1042,7 +1103,7 @@ function getCivRank(){
   return CIV_MILESTONES[0];
 }
 
-function renderCivRoad(){
+function renderCivRoadInner(){
   const v=state.vault;
   const minV=CIV_MILESTONES[0].val,maxV=CIV_MILESTONES[CIV_MILESTONES.length-1].val;
   const pct=Math.min(100,Math.max(0,((v-minV)/(maxV-minV))*100));
@@ -1057,7 +1118,6 @@ function renderCivRoad(){
   }).join('');
 
   return`<div class="civ-road">
-    <div class="civ-title">${rank.emoji} CIVILIZATION JOURNEY <span style="color:var(--muted);font-size:8px;font-weight:400">// $100K → $1M</span></div>
     <div class="civ-track">
       <div class="civ-line"></div>
       <div class="civ-progress" style="width:${pct}%"></div>
@@ -1068,8 +1128,7 @@ function renderCivRoad(){
 }
 
 // ═══ REPORTS & HEATMAP ═══
-function renderReports(){
-  const bots=[...state.bots,state.you];
+function renderReportsInner(){
   // Profit by market heatmap
   const marketPnl={};
   SYMBOLS.forEach(s=>marketPnl[s]={});
@@ -1087,7 +1146,6 @@ function renderReports(){
 
   let heatCells=`<div class="heat-cell" style="color:var(--muted)"></div>`;
   allBotIds.forEach(id=>{const b=state.bots.find(x=>x.id===id);heatCells+=`<div class="heat-cell" style="color:${b?.color||'var(--text)'}">${(b?.name||id).slice(0,3)}</div>`});
-  // Add YOU column header but skip data for now (YOU doesn't have history array like bots)
 
   SYMBOLS.forEach(sym=>{
     heatCells+=`<div class="heat-cell" style="color:var(--text);font-size:7px">${sym}</div>`;
@@ -1099,36 +1157,67 @@ function renderReports(){
     });
   });
 
-  // Best/worst stats
   const sorted=[...state.bots].sort((a,b)=>b.pnl-a.pnl);
   const bestBot=sorted[0],worstBot=sorted[sorted.length-1];
   const totalTrades=state.bots.reduce((a,b)=>a+b.trades,0)+state.you.trades;
   const totalWins=state.bots.reduce((a,b)=>a+b.wins,0)+state.you.wins;
   const overallWR=totalTrades?((totalWins/totalTrades)*100).toFixed(0):0;
-
-  // Net house value (vault minus bot borrowed)
   const totalBorrowed=state.bots.reduce((a,b)=>a+(b.borrowed||0),0)+(state.you.borrowed||0);
-  const netHouse=state.vault+totalBorrowed; // vault has already had margin deducted, so add back to get true equity
+  const netHouse=state.vault+totalBorrowed;
+  const taxCollected=state.taxCollected||0;
 
-  return`<div class="reports-card">
+  return`<div class="reports-inner">
     <div class="report-block">
-      <div class="report-title" style="color:var(--gold)">📊 PROFIT HEATMAP</div>
+      <div class="report-title" style="color:var(--gold)">PROFIT HEATMAP</div>
       <div class="heatmap-grid" style="grid-template-columns:repeat(${allBotIds.length+1},1fr)">${heatCells}</div>
     </div>
     <div class="report-block">
-      <div class="report-title" style="color:var(--cyan)">📈 ARENA STATS</div>
+      <div class="report-title" style="color:var(--cyan)">ARENA STATS</div>
       <div class="report-row"><span>Total Trades</span><span class="rv" style="color:var(--text)">${totalTrades}</span></div>
       <div class="report-row"><span>Win Rate</span><span class="rv" style="color:var(--cyan)">${overallWR}%</span></div>
       <div class="report-row"><span>Best Bot</span><span class="rv" style="color:var(--green)">${bestBot?bestBot.emoji+' '+bestBot.name:'-'} +$${bestBot?.pnl?.toFixed(0)||0}</span></div>
       <div class="report-row"><span>Worst Bot</span><span class="rv" style="color:var(--red)">${worstBot?worstBot.emoji+' '+worstBot.name:'-'} $${worstBot?.pnl?.toFixed(0)||0}</span></div>
       <div class="report-row"><span>Margin Out</span><span class="rv" style="color:var(--amber)">$${totalBorrowed.toFixed(0)}</span></div>
       <div class="report-row"><span>Net House Equity</span><span class="rv" style="color:var(--gold)">$${netHouse.toLocaleString('en-US',{maximumFractionDigits:0})}</span></div>
+      <div class="report-row"><span>Tax Collected</span><span class="rv" style="color:var(--green)">$${taxCollected.toFixed(0)}</span></div>
       <div class="report-row"><span>Vault P&L</span><span class="rv" style="color:${state.vault>=VAULT_START?'var(--green)':'var(--red)'}">${state.vault>=VAULT_START?'+':''}$${(state.vault-VAULT_START).toFixed(0)}</span></div>
     </div>
     <div class="report-block">
-      <div class="report-title" style="color:var(--green)">🏛️ VAULT CHART</div>
-      <div style="height:50px"><canvas id="vault-chart-canvas" style="width:100%;height:100%"></canvas></div>
+      <div class="report-title" style="color:var(--green)">VAULT CHART</div>
+      <div style="height:60px"><canvas id="vault-chart-canvas" style="width:100%;height:100%"></canvas></div>
     </div>
+  </div>`;
+}
+
+// ═══ RULES ═══
+function renderRulesInner(){
+  return`<div class="rules-inner">
+    <h3>THE GOAL</h3>
+    <p>Grow the House Vault from <strong style="color:var(--gold)">$100,000</strong> to <strong style="color:var(--green)">$1,000,000</strong>. You are the house. Your bots trade with your capital.</p>
+    <h3>HOW IT WORKS</h3>
+    <ul>
+      <li><span class="emoji-label">🏛️</span><strong>The Vault</strong> — Starting capital. Bots borrow margin from here and return it + P&L when they close trades.</li>
+      <li><span class="emoji-label">🤖</span><strong>AI Bots</strong> — 6 bots with unique strategies. Each borrows vault margin (5% of trade notional). Click any bot card to adjust aggression, patience, size, and markets.</li>
+      <li><span class="emoji-label">🎯</span><strong>Manual Trading (YOU)</strong> — Use the right panel to place your own trades. Pick symbol, size, long/short. Or enable AUTO to let the system trade for you.</li>
+      <li><span class="emoji-label">🔮</span><strong>ORACLE Bot</strong> — Expert quant that uses multi-signal fusion. Only trades A+ setups with 4+ confirming signals.</li>
+      <li><span class="emoji-label">💰</span><strong>House Tax</strong> — The house takes 10% of every bot winning trade as tax. This is how the vault grows even when bots are flat overall.</li>
+      <li><span class="emoji-label">📊</span><strong>Vault Investments</strong> — Idle vault cash auto-invests: 40% cash, 30% T-Bills (earn interest), 30% Gold (tracks real gold price).</li>
+    </ul>
+    <h3>GAME MODES</h3>
+    <ul>
+      <li><span class="emoji-label">🏢</span><strong>Prop Firm Mode</strong> — Toggle ON to fire any bot that drawdowns past -$500. Like a real prop firm cutting bad traders.</li>
+      <li><span class="emoji-label">⚡</span><strong>Speed Control</strong> — 1X (real-time), 5X, 20X. Higher speed = more trades/min.</li>
+    </ul>
+    <h3>CIVILIZATION RANKS</h3>
+    <p style="font-size:8px">🏪 Street Trader → 🏢 Corner Office → 💼 Fund Manager → 📊 Market Maker → 🐋 Whale → 🎩 Tycoon → 👑 Wall St King → 🏰 Empire Builder → 🏆 LEGEND</p>
+    <h3>TIPS</h3>
+    <ul>
+      <li>Disable losing bots early — they drain the vault</li>
+      <li>ORACLE bot has the best edge — give it more size</li>
+      <li>Prop firm mode protects against catastrophic drawdowns</li>
+      <li>House tax means even break-even bots generate vault income</li>
+      <li>Watch the heatmap to see which bot+market combos work</li>
+    </ul>
   </div>`;
 }
 
