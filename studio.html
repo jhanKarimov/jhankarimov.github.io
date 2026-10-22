@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>studio — jhan karimov</title>
+    <meta name="description" content="Games, tools, music and experiments by Jhan Karimov. Play the pads, check the ship log."/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700;800&display=swap');
+
+    :root{--ink:#fff;--dim:rgba(255,255,255,0.38);--faint:rgba(255,255,255,0.07);--accent:#c8a96e;--bg:#090909}
+    *{margin:0;padding:0;box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--ink);font-family:'Space Grotesk',sans-serif;min-height:100vh;overflow-x:hidden}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+
+    #fx{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+    main{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:0 28px}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:20px 40px;display:flex;align-items:center;justify-content:space-between}
+    nav::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(9,9,9,.9),transparent);z-index:-1;pointer-events:none}
+    .nav-name{font-size:.88rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);text-decoration:none;transition:color .2s}
+    .nav-name:hover{color:var(--ink)}
+    .nav-links{display:flex;gap:28px}
+    .nav-links a{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-decoration:none;transition:color .2s}
+    .nav-links a:hover{color:var(--ink)}
+
+    /* HERO */
+    #hero{min-height:78vh;display:flex;flex-direction:column;justify-content:center;padding-top:90px}
+    .label{font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin-bottom:20px}
+    .hero-title{font-size:clamp(3rem,10vw,7.5rem);font-weight:800;line-height:.95;letter-spacing:-.03em;margin-bottom:28px}
+    .hero-title span{display:block;color:var(--dim)}
+    .hero-sub{font-size:1.05rem;color:var(--dim);max-width:480px;line-height:1.7;font-weight:300}
+    .hero-sub em{font-style:normal;color:var(--ink)}
+
+    .section{padding:70px 0}
+    .section-title{font-size:clamp(1.6rem,3.5vw,2.4rem);font-weight:700;letter-spacing:-.02em;margin-bottom:12px}
+    .section-intro{font-size:.88rem;color:var(--dim);line-height:1.7;max-width:520px;margin-bottom:32px;font-weight:300}
+    .divider{width:40px;height:1px;background:var(--accent)}
+
+    /* PADS */
+    .pads{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--faint)}
+    .pad{aspect-ratio:1.25;background:var(--bg);border:0;color:var(--ink);font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:14px;transition:background .12s;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none}
+    .pad:hover{background:rgba(255,255,255,.04)}
+    .pad.hit{background:rgba(200,169,110,.28)}
+    .pad .key{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+    .pad .note{font-size:1.15rem;font-weight:700;letter-spacing:-.01em}
+    @media(max-width:520px){.pad{aspect-ratio:1}.pad .note{font-size:.95rem}}
+    .pad-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:18px}
+    .btn{padding:11px 22px;background:transparent;color:var(--ink);font-family:inherit;font-size:.75rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border:1px solid rgba(255,255,255,.22);border-radius:2px;cursor:pointer;transition:border-color .2s,background .2s}
+    .btn:hover{border-color:rgba(255,255,255,.6)}
+    .btn.solid{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+    .btn.solid:hover{opacity:.82}
+    .btn.live{border-color:#e5584b;color:#e5584b}
+    .btn:focus-visible,.pad:focus-visible,.chip:focus-visible,.log-form input:focus-visible{outline:1px solid var(--accent);outline-offset:2px}
+    .status{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+    .scale-pick{display:flex;gap:8px;margin-left:auto}
+    .scale-pick .btn{padding:11px 14px}
+    .scale-pick .btn.on{border-color:var(--accent);color:var(--accent)}
+
+    /* FILTER + GRID */
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+    .chip{padding:8px 16px;background:transparent;color:var(--dim);font-family:inherit;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--faint);border-radius:2px;cursor:pointer;transition:color .2s,border-color .2s}
+    .chip:hover{color:var(--ink);border-color:rgba(255,255,255,.3)}
+    .chip.on{color:var(--bg);background:var(--ink);border-color:var(--ink)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));border-top:1px solid var(--faint);border-left:1px solid var(--faint)}
+    .card{background:var(--bg);padding:26px 24px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:8px;transition:background .2s;border-right:1px solid var(--faint);border-bottom:1px solid var(--faint)}
+    .card:hover{background:rgba(255,255,255,.04)}
+    .card-top{display:flex;justify-content:space-between;align-items:center}
+    .tag{font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+    .state{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+    .state.live::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#58c47a;margin-right:6px;vertical-align:1px}
+    .card h3{font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
+    .card p{font-size:.82rem;color:var(--dim);line-height:1.6}
+    .go{margin-top:auto;padding-top:12px;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.3);transition:color .2s}
+    .card:hover .go{color:var(--ink)}
+    .empty{grid-column:1/-1;padding:28px 24px;font-size:.82rem;color:var(--dim);border-right:1px solid var(--faint);border-bottom:1px solid var(--faint)}
+
+    /* SHIP LOG */
+    .streak{display:flex;gap:32px;flex-wrap:wrap;margin-bottom:28px}
+    .stat{border-top:1px solid var(--faint);padding-top:14px;min-width:110px}
+    .stat b{display:block;font-size:2.2rem;font-weight:800;letter-spacing:-.04em;line-height:1}
+    .stat span{display:block;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:4px}
+    .weeks{display:flex;gap:4px;margin-bottom:28px}
+    .wk{flex:1;height:26px;background:var(--faint);border-radius:1px}
+    .wk.on{background:var(--accent)}
+    .wk.cur{outline:1px solid rgba(255,255,255,.35);outline-offset:1px}
+    .log-form{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px}
+    .log-form input{flex:1;min-width:200px;padding:12px 14px;background:transparent;color:var(--ink);font-family:inherit;font-size:.9rem;border:1px solid rgba(255,255,255,.18);border-radius:2px}
+    .log-form input::placeholder{color:rgba(255,255,255,.25)}
+    .entries{list-style:none}
+    .entries li{display:flex;gap:18px;padding:12px 0;border-top:1px solid var(--faint);font-size:.88rem;color:rgba(255,255,255,.75);font-weight:300}
+    .entries time{flex:0 0 74px;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding-top:3px}
+    .note-small{font-size:.7rem;color:rgba(255,255,255,.25);margin-top:14px;letter-spacing:.04em}
+
+    footer{position:relative;z-index:1;padding:28px 40px;border-top:1px solid var(--faint);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+    footer p{font-size:.72rem;letter-spacing:.08em;color:rgba(255,255,255,.2)}
+    footer a{color:rgba(255,255,255,.35);text-decoration:none;transition:color .2s}
+    footer a:hover{color:var(--ink)}
+    @media(max-width:640px){nav{padding:16px 20px}.nav-links{gap:16px}footer{padding:20px}main{padding:0 20px}}
+  </style>
+  </head>
+  <body>
+    <canvas id="fx" aria-hidden="true"></canvas>
+
+    <nav>
+      <a href="index.html" class="nav-name">jhan karimov</a>
+      <div class="nav-links">
+        <a href="#play">play</a>
+        <a href="#floor">floor</a>
+        <a href="#log">log</a>
+        <a href="index.html">home</a>
+      </div>
+    </nav>
+
+    <main>
+      <section id="hero">
+        <p class="label">the studio &mdash; new york</p>
+        <h1 class="hero-title">STU<span>DIO</span></h1>
+        <p class="hero-sub">Games, tools, music and half-finished experiments. <em>Hit a pad below</em> &mdash; the room plays back.</p>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- PLAY -->
+      <section id="play" class="section">
+        <p class="label">01 &mdash; play</p>
+        <h2 class="section-title">Pad Synth</h2>
+        <p class="section-intro">Tap, click, or use the keys <strong style="color:#fff">A S D F / J K L ;</strong>. Every note is in key, so nothing sounds wrong. Hit Loop to record 4 seconds and let it repeat while you play over it.</p>
+        <div class="pads" id="pads" role="group" aria-label="Synth pads"></div>
+        <div class="pad-bar">
+          <button class="btn solid" id="loopBtn" type="button">Loop 4s</button>
+          <button class="btn" id="clearBtn" type="button">Clear</button>
+          <span class="status" id="status">ready</span>
+          <div class="scale-pick" id="scalePick" role="group" aria-label="Scale"></div>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- FLOOR -->
+      <section id="floor" class="section">
+        <p class="label">02 &mdash; the floor</p>
+        <h2 class="section-title">Games &amp; tools</h2>
+        <p class="section-intro">Everything I've built that's worth a click. Filter by kind.</p>
+        <div class="chips" id="chips" role="group" aria-label="Filter"></div>
+        <div class="grid" id="grid"></div>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- LOG -->
+      <section id="log" class="section">
+        <p class="label">03 &mdash; ship log</p>
+        <h2 class="section-title">One thing a week</h2>
+        <p class="section-intro">The rule: ship one small thing every week, in public, with a one-line caption. Log it here. The streak counts weeks, not days &mdash; so one real ship keeps it alive.</p>
+        <div class="streak">
+          <div class="stat"><b id="stStreak">0</b><span>week streak</span></div>
+          <div class="stat"><b id="stTotal">0</b><span>total shipped</span></div>
+          <div class="stat"><b id="stWeek">&mdash;</b><span>this week</span></div>
+        </div>
+        <div class="weeks" id="weeks" aria-label="Last 12 weeks"></div>
+        <form class="log-form" id="logForm">
+          <input id="logInput" type="text" maxlength="120" placeholder="What did you ship?" autocomplete="off" aria-label="What did you ship"/>
+          <button class="btn solid" type="submit">Ship it</button>
+        </form>
+        <ul class="entries" id="entries"></ul>
+        <p class="note-small">Saved in this browser only.</p>
+      </section>
+    </main>
+
+    <footer>
+      <p>&copy; Jhan Karimov</p>
+      <p><a href="index.html">&larr; back home</a></p>
+    </footer>
+
+    <script>
+      // ================================================================
+      // ADD / EDIT ITEMS HERE — one object = one card on the floor.
+      // kind: 'game' | 'tool' | 'music' | 'photo' | 'read'
+      // state: 'live' (shows green dot) or any short text, e.g. 'wip'
+      // ================================================================
+      const ITEMS = [
+        { kind:'game',  name:'Bot Arena',      state:'live', desc:'Trading-bot battle simulation. Pick bots, run the arena, read the heatmap.', url:'bot-arena.html', cta:'Play' },
+        { kind:'tool',  name:'NEXUS Edge',     state:'live', desc:'Trading data dashboard. Profitable trading starts with data.', url:'nexus-data.html', cta:'Open' },
+        { kind:'game',  name:'Poker',          state:'repo', desc:'Browser-based poker game built with JavaScript.', url:'https://github.com/jhanKarimov/poker2', cta:'View repo' },
+        { kind:'tool',  name:'Link Preview',   state:'repo', desc:'Generate rich link previews for any URL.', url:'https://github.com/jhanKarimov/link-preview', cta:'View repo' },
+        { kind:'tool',  name:'Newsfeed',       state:'repo', desc:'Dynamic news aggregation and feed application.', url:'https://github.com/jhanKarimov/newsfeed', cta:'View repo' },
+        { kind:'photo', name:'Photo Flasher',  state:'live', desc:'Interactive photo gallery with a flash animation mode.', url:'https://jhankarimov.github.io/Jk/photos.html', cta:'Open' },
+        { kind:'read',  name:'The Novel',      state:'live', desc:'Read it in the browser.', url:'book/', cta:'Read' },
+        { kind:'music', name:'Pad Synth',      state:'live', desc:'The one above. Loop it, play over it.', url:'#play', cta:'Play now' },
+        // ---- ADD BELOW ----
+        // { kind:'music', name:'My Track', state:'live', desc:'One line.', url:'https://...', cta:'Listen' },
+      ];
+
+      const KINDS = ['all','game','tool','music','photo','read'];
+      let kind = 'all';
+
+      const chips = document.getElementById('chips');
+      const grid  = document.getElementById('grid');
+      const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+      function renderChips(){
+        chips.innerHTML = '';
+        KINDS.forEach(k => {
+          const n = k==='all' ? ITEMS.length : ITEMS.filter(i => i.kind===k).length;
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'chip' + (k===kind ? ' on' : '');
+          b.textContent = `${k} ${n}`;
+          b.setAttribute('aria-pressed', k===kind);
+          b.onclick = () => { kind = k; renderChips(); renderGrid(); };
+          chips.appendChild(b);
+        });
+      }
+      function renderGrid(){
+        const list = ITEMS.filter(i => kind==='all' || i.kind===kind);
+        if(!list.length){ grid.innerHTML = '<div class="empty">Nothing here yet &mdash; first one incoming.</div>'; return; }
+        grid.innerHTML = list.map(i => {
+          const ext = /^https?:/.test(i.url);
+          return `<a class="card" href="${esc(i.url)}"${ext ? ' target="_blank" rel="noopener"' : ''}>
+            <div class="card-top"><span class="tag">${esc(i.kind)}</span><span class="state ${i.state==='live'?'live':''}">${esc(i.state)}</span></div>
+            <h3>${esc(i.name)}</h3><p>${esc(i.desc)}</p><span class="go">${esc(i.cta)} &rarr;</span></a>`;
+        }).join('');
+      }
+      renderChips(); renderGrid();
+
+      // ================================================================
+      // PAD SYNTH (WebAudio) — pentatonic scales so every note fits
+      // ================================================================
+      const SCALES = {
+        minor: { label:'Minor', notes:[0,3,5,7,10,12,15,17] },   // minor pentatonic
+        major: { label:'Major', notes:[0,2,4,7,9,12,14,16] },    // major pentatonic
+        dream: { label:'Dream', notes:[0,2,7,9,12,14,19,21] }    // open, airy
+      };
+      const ROOT = 220;                       // A3
+      const KEYS = ['a','s','d','f','j','k','l',';'];
+      const NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+      let scale = 'minor', ac = null, master = null;
+      const freq = st => ROOT * Math.pow(2, st/12);
+      const noteName = st => NAMES[(9 + st) % 12];  // ROOT is A
+
+      function audio(){
+        if(ac) return ac;
+        try{
+          ac = new (window.AudioContext || window.webkitAudioContext)();
+          master = ac.createGain(); master.gain.value = .5;
+          const delay = ac.createDelay(); delay.delayTime.value = .28;
+          const fb = ac.createGain(); fb.gain.value = .32;
+          const wet = ac.createGain(); wet.gain.value = .35;
+          delay.connect(fb); fb.connect(delay); delay.connect(wet);
+          master.connect(ac.destination); master.connect(delay); wet.connect(ac.destination);
+        }catch(e){ ac = null; }
+        return ac;
+      }
+      function tone(i){
+        const a = audio(); if(!a) return;
+        if(a.state==='suspended') a.resume();
+        const t = a.currentTime, f = freq(SCALES[scale].notes[i]);
+        const g = a.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(.35, t+.012);
+        g.gain.exponentialRampToValueAtTime(.0008, t+1.1);
+        const lp = a.createBiquadFilter(); lp.type='lowpass';
+        lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(500, t+.9);
+        [['triangle',0],['sawtooth',6]].forEach(([type,det]) => {
+          const o = a.createOscillator(); o.type = type; o.frequency.value = f; o.detune.value = det;
+          const og = a.createGain(); og.gain.value = type==='sawtooth' ? .35 : 1;
+          o.connect(og); og.connect(lp); o.start(t); o.stop(t+1.2);
+        });
+        lp.connect(g); g.connect(master);
+      }
+
+      // pads
+      const padsEl = document.getElementById('pads');
+      const padEls = [];
+      function buildPads(){
+        padsEl.innerHTML = ''; padEls.length = 0;
+        SCALES[scale].notes.forEach((st,i) => {
+          const b = document.createElement('button');
+          b.type='button'; b.className='pad';
+          b.setAttribute('aria-label', `${noteName(st)} (key ${KEYS[i]})`);
+          b.innerHTML = `<span class="key">${KEYS[i]}</span><span class="note">${noteName(st)}</span>`;
+          b.addEventListener('pointerdown', e => { e.preventDefault(); hit(i, true); });
+          padsEl.appendChild(b); padEls.push(b);
+        });
+      }
+
+      // loop recorder
+      const LOOP_MS = 4000;
+      let rec = null, events = [], loopTimer = null, loopStart = 0, timers = [];
+      const loopBtn = document.getElementById('loopBtn');
+      const statusEl = document.getElementById('status');
+      const setStatus = s => statusEl.textContent = s;
+
+      function hit(i, user){
+        tone(i);
+        const b = padEls[i];
+        if(b){ b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 140); burst(b); }
+        if(user && rec) events.push({ i, t: performance.now() - rec });
+      }
+      function schedule(){
+        timers.forEach(clearTimeout); timers = [];
+        events.forEach(ev => timers.push(setTimeout(() => hit(ev.i, false), ev.t)));
+      }
+      function startLoop(){
+        events = []; rec = performance.now();
+        loopBtn.textContent = 'Recording…'; loopBtn.classList.add('live');
+        setStatus('recording 4s');
+        setTimeout(() => {
+          rec = null;
+          loopBtn.classList.remove('live'); loopBtn.textContent = 'Loop 4s';
+          if(!events.length){ setStatus('nothing recorded'); return; }
+          setStatus(`looping ${events.length} notes`);
+          loopStart = performance.now(); schedule();
+          loopTimer = setInterval(schedule, LOOP_MS);
+        }, LOOP_MS);
+      }
+      function clearLoop(){
+        clearInterval(loopTimer); loopTimer = null;
+        timers.forEach(clearTimeout); timers = []; events = []; rec = null;
+        loopBtn.classList.remove('live'); loopBtn.textContent = 'Loop 4s';
+        setStatus('cleared');
+      }
+      loopBtn.onclick = () => { if(rec) return; if(loopTimer) clearLoop(); audio(); startLoop(); };
+      document.getElementById('clearBtn').onclick = clearLoop;
+
+      // scale picker
+      const pick = document.getElementById('scalePick');
+      Object.entries(SCALES).forEach(([k,s]) => {
+        const b = document.createElement('button');
+        b.type='button'; b.className='btn' + (k===scale ? ' on' : ''); b.textContent = s.label;
+        b.onclick = () => {
+          scale = k; clearLoop(); buildPads();
+          [...pick.children].forEach(c => c.classList.toggle('on', c===b));
+          setStatus(s.label.toLowerCase());
+        };
+        pick.appendChild(b);
+      });
+      buildPads();
+
+      // keyboard
+      const down = new Set();
+      addEventListener('keydown', e => {
+        if(e.metaKey || e.ctrlKey || e.altKey) return;
+        const t = e.target.tagName;
+        if(t==='INPUT' || t==='TEXTAREA') return;
+        const i = KEYS.indexOf(e.key.toLowerCase());
+        if(i < 0 || down.has(e.key)) return;
+        down.add(e.key); hit(i, true);
+      });
+      addEventListener('keyup', e => down.delete(e.key));
+
+      // ================================================================
+      // BACKGROUND FX — slow drifting dots, bursts on pad hits
+      // ================================================================
+      const cv = document.getElementById('fx'), cx = cv.getContext('2d');
+      const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+      let W, H, dots = [], sparks = [];
+      function size(){ const d = devicePixelRatio || 1; W = innerWidth; H = innerHeight; cv.width = W*d; cv.height = H*d; cx.setTransform(d,0,0,d,0,0); }
+      size(); addEventListener('resize', size);
+      for(let i=0;i<70;i++) dots.push({ x:Math.random()*innerWidth, y:Math.random()*innerHeight, r:Math.random()*1.6+.4, v:Math.random()*.12+.02, p:Math.random()*6.28 });
+      function burst(el){
+        if(reduce) return;
+        const r = el.getBoundingClientRect(), x = r.left + r.width/2, y = r.top + r.height/2;
+        for(let i=0;i<16;i++){
+          const a = Math.random()*6.28, s = Math.random()*2.6+.6;
+          sparks.push({ x, y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, life:1 });
+        }
+      }
+      function frame(){
+        cx.clearRect(0,0,W,H);
+        const t = performance.now()/1000;
+        dots.forEach(d => {
+          d.y -= d.v; if(d.y < -4) { d.y = H+4; d.x = Math.random()*W; }
+          cx.globalAlpha = .12 + .3*Math.abs(Math.sin(t*.6 + d.p));
+          cx.fillStyle = '#fff'; cx.beginPath(); cx.arc(d.x, d.y, d.r, 0, 6.28); cx.fill();
+        });
+        sparks = sparks.filter(s => s.life > 0.02);
+        sparks.forEach(s => {
+          s.x += s.vx; s.y += s.vy; s.vx *= .95; s.vy *= .95; s.life *= .94;
+          cx.globalAlpha = s.life; cx.fillStyle = '#c8a96e';
+          cx.beginPath(); cx.arc(s.x, s.y, 2.2*s.life + .6, 0, 6.28); cx.fill();
+        });
+        requestAnimationFrame(frame);
+      }
+      if(!reduce) frame();
+
+      // ================================================================
+      // SHIP LOG — localStorage, weekly streak (weeks start Monday)
+      // ================================================================
+      const KEY = 'jk-ship-log-v1';
+      let log = [];
+      try{ log = JSON.parse(localStorage.getItem(KEY)) || []; if(!Array.isArray(log)) log = []; }catch(e){ log = []; }
+      const save = () => { try{ localStorage.setItem(KEY, JSON.stringify(log)); }catch(e){} };
+
+      function weekStart(ts){
+        const d = new Date(ts); d.setHours(0,0,0,0);
+        d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+        return d.getTime();
+      }
+      const WK = 7*864e5;
+
+      function renderLog(){
+        const weeksWith = new Set(log.map(e => weekStart(e.t)));
+        const cur = weekStart(Date.now());
+        let streak = 0, w = cur;
+        if(!weeksWith.has(w)) w -= WK;      // this week still open: don't break the streak yet
+        while(weeksWith.has(w)){ streak++; w -= WK; }
+
+        document.getElementById('stStreak').textContent = streak;
+        document.getElementById('stTotal').textContent = log.length;
+        document.getElementById('stWeek').textContent = weeksWith.has(cur) ? '✓' : '—';
+
+        const wk = document.getElementById('weeks'); wk.innerHTML = '';
+        for(let i=11;i>=0;i--){
+          const s = cur - i*WK, d = document.createElement('div');
+          d.className = 'wk' + (weeksWith.has(s) ? ' on' : '') + (i===0 ? ' cur' : '');
+          d.title = 'Week of ' + new Date(s).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+          wk.appendChild(d);
+        }
+        const ul = document.getElementById('entries');
+        ul.innerHTML = [...log].sort((a,b) => b.t - a.t).slice(0,6).map(e =>
+          `<li><time>${new Date(e.t).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</time><span>${esc(e.text)}</span></li>`).join('')
+          || '<li><span style="color:rgba(255,255,255,.25)">Nothing logged yet. Ship something small today.</span></li>';
+      }
+      document.getElementById('logForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const inp = document.getElementById('logInput'), text = inp.value.trim();
+        if(!text) return;
+        log.push({ t: Date.now(), text }); save(); inp.value = ''; renderLog();
+      });
+      renderLog();
+    </script>
+  </body>
+</html>
